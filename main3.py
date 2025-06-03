@@ -28,6 +28,23 @@ class LogInWindow(QtWidgets.QMainWindow):
         # 窗口居中显示
         self.center()
 
+        # 添加退出按钮
+        exit_button = QPushButton(self)
+        exit_button.setText("X")
+        exit_button.setGeometry(QtCore.QRect(self.width() - 50, 10, 40, 40))
+        exit_button.setStyleSheet("""
+                    QPushButton {
+                        background-color: rgba(255, 255, 255, 50);
+                        color: white;
+                        font: 14pt "微软雅黑";
+                        border-radius: 5px;
+                    }
+                    QPushButton:hover {
+                        background-color: rgba(255, 0, 0, 100);
+                    }
+                """)
+        exit_button.clicked.connect(self.close)
+
         #用户与厂商登陆界面切换
         self.ui.pushButton_switch.clicked.connect(lambda: self.switch_page(FLAG))
 
@@ -235,6 +252,22 @@ class MainUserWindow(QtWidgets.QMainWindow):
         # 窗口居中
         self.center()
 
+        # 添加退出按钮
+        exit_button = QPushButton(self)
+        exit_button.setText("X")
+        exit_button.setGeometry(QtCore.QRect(self.width() - 50, 10, 40, 40))
+        exit_button.setStyleSheet("""
+                   QPushButton {
+                       background-color: rgba(255, 255, 255, 50);
+                       color: white;
+                       font: 14pt "微软雅黑";
+                       border-radius: 5px;
+                   }
+                   QPushButton:hover {
+                       background-color: rgba(255, 0, 0, 100);
+                   }
+               """)
+        exit_button.clicked.connect(self.close)
         #按钮绑定
         #搜索按钮绑定
         self.ui.pushButton_SearchGame.clicked.connect(self.show_searchgame_page)
@@ -1917,6 +1950,23 @@ class MainManufacturerWindow(QtWidgets.QMainWindow):
 
         # 窗口居中
         self.center()
+
+        # 添加退出按钮
+        exit_button = QPushButton(self)
+        exit_button.setText("X")
+        exit_button.setGeometry(QtCore.QRect(self.width() - 50, 10, 40, 40))
+        exit_button.setStyleSheet("""
+                   QPushButton {
+                       background-color: rgba(255, 255, 255, 50);
+                       color: white;
+                       font: 14pt "微软雅黑";
+                       border-radius: 5px;
+                   }
+                   QPushButton:hover {
+                       background-color: rgba(255, 0, 0, 100);
+                   }
+               """)
+        exit_button.clicked.connect(self.close)
 
         #按钮绑定
         #跳转发布游戏界面按钮绑定
