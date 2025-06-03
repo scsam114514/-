@@ -21,9 +21,9 @@ class LogInWindow(QtWidgets.QMainWindow):
         self.ui = Ui_LRMainWindow()
         self.ui.setupUi(self)
 
-        # # 设置窗口无边框及透明背景
-        # self.setWindowFlag(QtCore.Qt.FramelessWindowHint)
-        # self.setAttribute(QtCore.Qt.WA_TranslucentBackground)
+        # 设置窗口无边框及透明背景
+        self.setWindowFlag(QtCore.Qt.FramelessWindowHint)
+        self.setAttribute(QtCore.Qt.WA_TranslucentBackground)
 
         # 窗口居中显示
         self.center()
@@ -228,9 +228,9 @@ class MainUserWindow(QtWidgets.QMainWindow):
         self.ui.setupUi(self)
         self.ui.stackedWidget_Window.setCurrentIndex(0)
 
-        # # 设置窗口无边框及透明背景
-        # self.setWindowFlag(QtCore.Qt.FramelessWindowHint)
-        # self.setAttribute(QtCore.Qt.WA_TranslucentBackground)
+        # 设置窗口无边框及透明背景
+        self.setWindowFlag(QtCore.Qt.FramelessWindowHint)
+        self.setAttribute(QtCore.Qt.WA_TranslucentBackground)
 
         # 窗口居中
         self.center()
@@ -1912,8 +1912,8 @@ class MainManufacturerWindow(QtWidgets.QMainWindow):
         self.ui.stackedWidget.setCurrentIndex(0)
         self.ui.success_error_Type.setCurrentIndex(0)
         # 设置窗口无边框及透明背景
-        # self.setWindowFlag(QtCore.Qt.FramelessWindowHint)
-        # self.setAttribute(QtCore.Qt.WA_TranslucentBackground)
+        self.setWindowFlag(QtCore.Qt.FramelessWindowHint)
+        self.setAttribute(QtCore.Qt.WA_TranslucentBackground)
 
         # 窗口居中
         self.center()
