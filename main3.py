@@ -12,6 +12,9 @@ USERID = None
 MANUFACTURERID = None
 FLAG = 0 #登录注册的标记
 
+###  adada
+num = 10
+
 class LogInWindow(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
