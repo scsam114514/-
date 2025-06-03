@@ -151,6 +151,39 @@ class MainUserWindow(QtWidgets.QMainWindow):
         horizontalLayout_2.addWidget(pushButton)
         game_frame.addLayout(horizontalLayout_2)
 
+    # def add_game_to_shoppingcart(self, game_name, user_id):
+    #     with pymysql.connect(host="localhost", user="root", password='123456', port=3306, db='game_system') as db:
+    #         cursor = db.cursor()
+    #         cursor.execute("SELECT GAME_ID FROM having_games WHERE USER_ID = %s", (user_id,))
+    #         all_having_games_ids = [id[0] for id in cursor.fetchall()]
+    #         cursor.execute("SELECT GAME_ID FROM game WHERE GAME_NAME = %s", (game_name,))
+    #         game_id = cursor.fetchone()
+    #         if game_id and game_id[0] in all_having_games_ids:
+    #             print("此游戏已在用户游戏库中，无法添加至购物车。")
+    #             return
+    #         cursor.execute("SELECT ORDER_ID FROM order_for_goods WHERE USER_ID = %s AND ORDER_STATE = 0", (user_id,))
+    #         order_id = cursor.fetchone()
+    #         if order_id:
+    #             cursor.execute("SELECT 1 FROM order_details WHERE ORDER_ID = %s AND GAME_ID = %s",
+    #                            (order_id[0], game_id[0]))
+    #             if not cursor.fetchone():
+    #                 now_date = datetime.datetime.now()
+    #                 cursor.execute(
+    #                     "INSERT INTO order_details (ORDER_ID, GAME_ID, DETAIL_TIME, BUY_OR_REFUND) VALUES (%s, %s, %s, 0)",
+    #                     (order_id[0], game_id[0], now_date))
+    #                 db.commit()
+    #         else:
+    #             now_date = datetime.datetime.now()
+    #             cursor.execute("INSERT INTO order_for_goods (USER_ID, ORDER_STATE, ORDER_TIME) VALUES (%s, 0, %s)",
+    #                            (user_id, now_date))
+    #             cursor.execute(
+    #                 "SELECT ORDER_ID FROM order_for_goods WHERE USER_ID = %s AND ORDER_STATE = 0 ORDER BY ORDER_ID DESC LIMIT 1",
+    #                 (user_id,))
+    #             new_order_id = cursor.fetchone()[0]
+    #             cursor.execute(
+    #                 "INSERT INTO order_details (ORDER_ID, GAME_ID, DETAIL_TIME, BUY_OR_REFUND) VALUES (%s, %s, %s, 0)",
+    #                 (new_order_id, game_id[0], now_date))
+    #             db.commit()
     def add_game_to_shoppingcart(self, game_name, user_id):
         with pymysql.connect(host="localhost", user="root", password='123456', port=3306, db='game_system') as db:
             cursor = db.cursor()
@@ -159,7 +192,7 @@ class MainUserWindow(QtWidgets.QMainWindow):
             cursor.execute("SELECT GAME_ID FROM game WHERE GAME_NAME = %s", (game_name,))
             game_id = cursor.fetchone()
             if game_id and game_id[0] in all_having_games_ids:
-                print("此游戏已在用户游戏库中，无法添加至购物车。")
+                QMessageBox.warning(self, "提示", f"游戏 {game_name} 已在您的游戏库中，无法添加至购物车。")
                 return
             cursor.execute("SELECT ORDER_ID FROM order_for_goods WHERE USER_ID = %s AND ORDER_STATE = 0", (user_id,))
             order_id = cursor.fetchone()
@@ -172,6 +205,7 @@ class MainUserWindow(QtWidgets.QMainWindow):
                         "INSERT INTO order_details (ORDER_ID, GAME_ID, DETAIL_TIME, BUY_OR_REFUND) VALUES (%s, %s, %s, 0)",
                         (order_id[0], game_id[0], now_date))
                     db.commit()
+                    QMessageBox.information(self, "提示", f"游戏 {game_name} 已成功添加到购物车！")
             else:
                 now_date = datetime.datetime.now()
                 cursor.execute("INSERT INTO order_for_goods (USER_ID, ORDER_STATE, ORDER_TIME) VALUES (%s, 0, %s)",
@@ -184,6 +218,87 @@ class MainUserWindow(QtWidgets.QMainWindow):
                     "INSERT INTO order_details (ORDER_ID, GAME_ID, DETAIL_TIME, BUY_OR_REFUND) VALUES (%s, %s, %s, 0)",
                     (new_order_id, game_id[0], now_date))
                 db.commit()
+                QMessageBox.information(self, "提示", f"游戏 {game_name} 已成功添加到购物车！")
+
+    def pay_for_game(self, order_id):
+        with pymysql.connect(host="localhost", user="root", password='123456', port=3306, db='game_system') as db:
+            cursor = db.cursor()
+            try:
+                cursor.execute("SELECT GAME_ID FROM order_details WHERE ORDER_ID = %s AND BUY_OR_REFUND = 0",
+                               (order_id,))
+                purchased_game_ids = cursor.fetchall()
+                if not purchased_game_ids:
+                    QMessageBox.warning(self, "提示", "购物车为空，无法支付！")
+                    return
+                for game_id in purchased_game_ids:
+                    cursor.execute(
+                        "UPDATE order_details SET BUY_OR_REFUND = 1 WHERE GAME_ID = %s AND BUY_OR_REFUND = 0 AND ORDER_ID = %s",
+                        (game_id[0], order_id))
+                cursor.execute(
+                    "UPDATE order_for_goods SET ORDER_STATE = 1 WHERE USER_ID = %s AND ORDER_STATE = 0 AND ORDER_ID = %s",
+                    (self.user_id, order_id))
+                now_time = datetime.datetime.now()
+                for game_id in purchased_game_ids:
+                    cursor.execute("INSERT IGNORE INTO having_games (USER_ID, GAME_ID, BUY_TIME) VALUES (%s, %s, %s)",
+                                   (self.user_id, game_id[0], now_time))
+                db.commit()
+                QMessageBox.information(self, "提示", "支付成功，游戏已添加到您的游戏库！")
+            except Exception as e:
+                print(f"支付过程中发生错误: {e}")
+                db.rollback()
+                QMessageBox.warning(self, "错误", f"支付失败: {e}")
+        QTimer.singleShot(0, lambda: self.reload_shopping_cart(order_id))
+
+    def remove_games_from_shoppingcart(self, order_id, game_name):
+        db = pymysql.connect(host="localhost", user="root", password='123456', port=3306, db='game_system')
+        cursor = db.cursor()
+        try:
+            cursor.execute("SELECT GAME_ID FROM game WHERE GAME_NAME = %s", (game_name,))
+            game_id_result = cursor.fetchone()
+            if game_id_result:
+                game_id = game_id_result[0]
+                cursor.execute("DELETE FROM order_details WHERE ORDER_ID = %s AND GAME_ID = %s", (order_id, game_id))
+                db.commit()
+                QMessageBox.information(self, "提示", f"游戏 {game_name} 已从购物车移除！")
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            db.rollback()
+            QMessageBox.warning(self, "错误", f"移除游戏失败: {e}")
+        finally:
+            db.close()
+        QTimer.singleShot(0, lambda: self.reload_shopping_cart(order_id))
+
+    def remove_games_from_gamelirary(self, game_name):
+        db = pymysql.connect(host="localhost", user="root", password='123456', port=3306, db='game_system')
+        cursor = db.cursor()
+        try:
+            cursor.execute("SELECT GAME_ID FROM game WHERE GAME_NAME = %s", (game_name,))
+            game_id_result = cursor.fetchone()
+            if game_id_result:
+                game_id = game_id_result[0]
+                cursor.execute("DELETE FROM having_games WHERE USER_ID = %s AND GAME_ID = %s", (self.user_id, game_id))
+                now_date = datetime.datetime.now()
+                cursor.execute("INSERT INTO order_for_goods (USER_ID, ORDER_STATE, ORDER_TIME) VALUES (%s, 0, %s)",
+                               (self.user_id, now_date))
+                cursor.execute(
+                    "SELECT ORDER_ID FROM order_for_goods WHERE USER_ID = %s AND ORDER_STATE = 0 ORDER BY ORDER_ID DESC LIMIT 1",
+                    (self.user_id,))
+                new_order_id = cursor.fetchone()[0]
+                cursor.execute(
+                    "INSERT INTO order_details (ORDER_ID, GAME_ID, DETAIL_TIME, BUY_OR_REFUND) VALUES (%s, %s, %s, 2)",
+                    (new_order_id, game_id, now_date))
+                cursor.execute(
+                    "UPDATE order_for_goods SET ORDER_STATE = 1 WHERE USER_ID = %s AND ORDER_STATE = 0 AND ORDER_ID = %s",
+                    (self.user_id, new_order_id))
+                db.commit()
+                QMessageBox.information(self, "提示", f"游戏 {game_name} 已从游戏库移除！")
+                self.reload_gamelibrary()
+        except Exception as e:
+            print(f"删除游戏时发生错误: {e}")
+            db.rollback()
+            QMessageBox.warning(self, "错误", f"移除游戏失败: {e}")
+        finally:
+            db.close()
 
     def show_searchgame_page(self):
         self.ui.stackedWidget_Window.setCurrentIndex(1)
@@ -718,28 +833,28 @@ class MainUserWindow(QtWidgets.QMainWindow):
         self.ui.stackedWidget_Window.setCurrentIndex(3)
         self.ui.label_Show_FriendName.setText(user_name)
 
-    def remove_games_from_gamelirary(self, game_name):
-        db = pymysql.connect(host="localhost", user="root", password='123456', port=3306, db='game_system')
-        cursor = db.cursor()
-        try:
-            cursor.execute("SELECT GAME_ID FROM game WHERE GAME_NAME = %s", (game_name,))
-            game_id_result = cursor.fetchone()
-            if game_id_result:
-                game_id = game_id_result[0]
-                cursor.execute("DELETE FROM having_games WHERE USER_ID = %s AND GAME_ID = %s", (self.user_id, game_id))
-                now_date = datetime.datetime.now()
-                cursor.execute("INSERT INTO order_for_goods (USER_ID, ORDER_STATE, ORDER_TIME) VALUES (%s, 0, %s)", (self.user_id, now_date))
-                cursor.execute("SELECT ORDER_ID FROM order_for_goods WHERE USER_ID = %s AND ORDER_STATE = 0 ORDER BY ORDER_ID DESC LIMIT 1", (self.user_id,))
-                new_order_id = cursor.fetchone()[0]
-                cursor.execute("INSERT INTO order_details (ORDER_ID, GAME_ID, DETAIL_TIME, BUY_OR_REFUND) VALUES (%s, %s, %s, 2)", (new_order_id, game_id, now_date))
-                cursor.execute("UPDATE order_for_goods SET ORDER_STATE = 1 WHERE USER_ID = %s AND ORDER_STATE = 0 AND ORDER_ID = %s", (self.user_id, new_order_id))
-                db.commit()
-                self.reload_gamelibrary()
-        except Exception as e:
-            print(f"删除游戏时发生错误: {e}")
-            db.rollback()
-        finally:
-            db.close()
+    # def remove_games_from_gamelirary(self, game_name):
+    #     db = pymysql.connect(host="localhost", user="root", password='123456', port=3306, db='game_system')
+    #     cursor = db.cursor()
+    #     try:
+    #         cursor.execute("SELECT GAME_ID FROM game WHERE GAME_NAME = %s", (game_name,))
+    #         game_id_result = cursor.fetchone()
+    #         if game_id_result:
+    #             game_id = game_id_result[0]
+    #             cursor.execute("DELETE FROM having_games WHERE USER_ID = %s AND GAME_ID = %s", (self.user_id, game_id))
+    #             now_date = datetime.datetime.now()
+    #             cursor.execute("INSERT INTO order_for_goods (USER_ID, ORDER_STATE, ORDER_TIME) VALUES (%s, 0, %s)", (self.user_id, now_date))
+    #             cursor.execute("SELECT ORDER_ID FROM order_for_goods WHERE USER_ID = %s AND ORDER_STATE = 0 ORDER BY ORDER_ID DESC LIMIT 1", (self.user_id,))
+    #             new_order_id = cursor.fetchone()[0]
+    #             cursor.execute("INSERT INTO order_details (ORDER_ID, GAME_ID, DETAIL_TIME, BUY_OR_REFUND) VALUES (%s, %s, %s, 2)", (new_order_id, game_id, now_date))
+    #             cursor.execute("UPDATE order_for_goods SET ORDER_STATE = 1 WHERE USER_ID = %s AND ORDER_STATE = 0 AND ORDER_ID = %s", (self.user_id, new_order_id))
+    #             db.commit()
+    #             self.reload_gamelibrary()
+    #     except Exception as e:
+    #         print(f"删除游戏时发生错误: {e}")
+    #         db.rollback()
+    #     finally:
+    #         db.close()
 
     def reload_gamelibrary(self):
         for child in self.ui.scrollAreaWidgetContents_GameLibrary.findChildren(QWidget):
@@ -809,22 +924,22 @@ class MainUserWindow(QtWidgets.QMainWindow):
         pushButton_Remove.setText("移出购物车")
         frame_shopingcartgame.show()
 
-    def remove_games_from_shoppingcart(self, order_id, game_name):
-        db = pymysql.connect(host="localhost", user="root", password='123456', port=3306, db='game_system')
-        cursor = db.cursor()
-        try:
-            cursor.execute("SELECT GAME_ID FROM game WHERE GAME_NAME = %s", (game_name,))
-            game_id_result = cursor.fetchone()
-            if game_id_result:
-                game_id = game_id_result[0]
-                cursor.execute("DELETE FROM order_details WHERE ORDER_ID = %s AND GAME_ID = %s", (order_id, game_id))
-                db.commit()
-        except Exception as e:
-            print(f"An error occurred: {e}")
-            db.rollback()
-        finally:
-            db.close()
-        QTimer.singleShot(0, lambda: self.reload_shopping_cart(order_id))
+    # def remove_games_from_shoppingcart(self, order_id, game_name):
+    #     db = pymysql.connect(host="localhost", user="root", password='123456', port=3306, db='game_system')
+    #     cursor = db.cursor()
+    #     try:
+    #         cursor.execute("SELECT GAME_ID FROM game WHERE GAME_NAME = %s", (game_name,))
+    #         game_id_result = cursor.fetchone()
+    #         if game_id_result:
+    #             game_id = game_id_result[0]
+    #             cursor.execute("DELETE FROM order_details WHERE ORDER_ID = %s AND GAME_ID = %s", (order_id, game_id))
+    #             db.commit()
+    #     except Exception as e:
+    #         print(f"An error occurred: {e}")
+    #         db.rollback()
+    #     finally:
+    #         db.close()
+    #     QTimer.singleShot(0, lambda: self.reload_shopping_cart(order_id))
 
     def reload_shopping_cart(self, order_id):
         for child in self.ui.scrollAreaWidgetContents_Shoppingcart.findChildren(QWidget):
@@ -855,23 +970,23 @@ class MainUserWindow(QtWidgets.QMainWindow):
             else:
                 self.ui.label_showAllPrice.setText("0")
 
-    def pay_for_game(self, order_id):
-        with pymysql.connect(host="localhost", user="root", password='123456', port=3306, db='game_system') as db:
-            cursor = db.cursor()
-            try:
-                cursor.execute("SELECT GAME_ID FROM order_details WHERE ORDER_ID = %s AND BUY_OR_REFUND = 0", (order_id,))
-                purchased_game_ids = cursor.fetchall()
-                for game_id in purchased_game_ids:
-                    cursor.execute("UPDATE order_details SET BUY_OR_REFUND = 1 WHERE GAME_ID = %s AND BUY_OR_REFUND = 0 AND ORDER_ID = %s", (game_id[0], order_id))
-                cursor.execute("UPDATE order_for_goods SET ORDER_STATE = 1 WHERE USER_ID = %s AND ORDER_STATE = 0 AND ORDER_ID = %s", (self.user_id, order_id))
-                now_time = datetime.datetime.now()
-                for game_id in purchased_game_ids:
-                    cursor.execute("INSERT IGNORE INTO having_games (USER_ID, GAME_ID, BUY_TIME) VALUES (%s, %s, %s)", (self.user_id, game_id[0], now_time))
-                db.commit()
-            except Exception as e:
-                print(f"支付过程中发生错误: {e}")
-                db.rollback()
-        QTimer.singleShot(0, lambda: self.reload_shopping_cart(order_id))
+    # def pay_for_game(self, order_id):
+    #     with pymysql.connect(host="localhost", user="root", password='123456', port=3306, db='game_system') as db:
+    #         cursor = db.cursor()
+    #         try:
+    #             cursor.execute("SELECT GAME_ID FROM order_details WHERE ORDER_ID = %s AND BUY_OR_REFUND = 0", (order_id,))
+    #             purchased_game_ids = cursor.fetchall()
+    #             for game_id in purchased_game_ids:
+    #                 cursor.execute("UPDATE order_details SET BUY_OR_REFUND = 1 WHERE GAME_ID = %s AND BUY_OR_REFUND = 0 AND ORDER_ID = %s", (game_id[0], order_id))
+    #             cursor.execute("UPDATE order_for_goods SET ORDER_STATE = 1 WHERE USER_ID = %s AND ORDER_STATE = 0 AND ORDER_ID = %s", (self.user_id, order_id))
+    #             now_time = datetime.datetime.now()
+    #             for game_id in purchased_game_ids:
+    #                 cursor.execute("INSERT IGNORE INTO having_games (USER_ID, GAME_ID, BUY_TIME) VALUES (%s, %s, %s)", (self.user_id, game_id[0], now_time))
+    #             db.commit()
+    #         except Exception as e:
+    #             print(f"支付过程中发生错误: {e}")
+    #             db.rollback()
+    #     QTimer.singleShot(0, lambda: self.reload_shopping_cart(order_id))
 
     def test(self, testname):
         print(testname)
