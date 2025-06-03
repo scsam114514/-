@@ -9,6 +9,7 @@ import datetime
 class MainUserWindow(QtWidgets.QMainWindow):
     new_game_score = 1
     evaluation_frames = []
+    test01=0
 
 
     def __init__(self, user_id):
@@ -294,6 +295,27 @@ class MainUserWindow(QtWidgets.QMainWindow):
         finally:
             db.close()
 
+    # def add_user_friends(self, x, y, name):
+    #     frame_Friend = QFrame(parent=self.ui.scrollAreaWidgetContents_2)
+    #     frame_Friend.move(x, y)
+    #     frame_Friend.setMinimumSize(250, 80)
+    #     frame_Friend.setMaximumSize(250, 80)
+    #     frame_Friend.setStyleSheet("background-color: rgb(128, 134, 255);")
+    #
+    #     pushButton_Friend = QPushButton(frame_Friend)
+    #     pushButton_Friend.setGeometry(QtCore.QRect(10, 10, 60, 60))
+    #     pushButton_Friend.setText("")
+    #     icon = QtGui.QIcon()
+    #     icon.addPixmap(QtGui.QPixmap(":/icon/u=772358879,2131786806&fm=253&fmt=auto&app=138&f=JPEG.webp"),
+    #                    QtGui.QIcon.Normal, QtGui.QIcon.Off)
+    #     pushButton_Friend.setIcon(icon)
+    #     pushButton_Friend.setIconSize(QtCore.QSize(60, 60))
+    #     pushButton_Friend.clicked.connect(lambda: self.show_friend_page(name))
+    #
+    #     label_FriendName = QLabel(frame_Friend)
+    #     label_FriendName.setGeometry(QtCore.QRect(90, 30, 141, 21))
+    #     label_FriendName.setText(name)
+    #     frame_Friend.show()
     def add_user_friends(self, x, y, name):
         frame_Friend = QFrame(parent=self.ui.scrollAreaWidgetContents_2)
         frame_Friend.move(x, y)
@@ -314,7 +336,42 @@ class MainUserWindow(QtWidgets.QMainWindow):
         label_FriendName = QLabel(frame_Friend)
         label_FriendName.setGeometry(QtCore.QRect(90, 30, 141, 21))
         label_FriendName.setText(name)
+
+        # 新增“删除好友”按钮
+        pushButton_Delete = QPushButton(frame_Friend)
+        pushButton_Delete.setGeometry(QtCore.QRect(170, 50, 75, 20))
+        pushButton_Delete.setStyleSheet("background-color: rgb(154, 231, 231); color: rgb(255, 255, 255);")
+        pushButton_Delete.setText("删除好友")
+        pushButton_Delete.clicked.connect(lambda: self.delete_friend(name))
+
         frame_Friend.show()
+
+    # 处理好友删除逻辑
+    def delete_friend(self, friend_name):
+        db = pymysql.connect(host="localhost", user="root", password='123456', port=3306, db='game_system')
+        cursor = db.cursor()
+        try:
+            cursor.execute("SELECT USER_ID FROM user WHERE ACCOUNT_NUMBER = %s", (friend_name,))
+            friend_id_result = cursor.fetchone()
+            if not friend_id_result:
+                QMessageBox.warning(self, "提示", f"用户 {friend_name} 不存在")
+                return
+            friend_id = friend_id_result[0]
+            # 删除双向好友关系
+            cursor.execute("DELETE FROM friend WHERE USER_ID = %s AND FRIEND_ID = %s AND STATE = 1",
+                           (self.user_id, friend_id))
+            cursor.execute("DELETE FROM friend WHERE USER_ID = %s AND FRIEND_ID = %s AND STATE = 1",
+                           (friend_id, self.user_id))
+            db.commit()
+            QMessageBox.information(self, "提示", f"已删除好友 {friend_name}")
+        except Exception as e:
+            print(f"删除好友时出错: {e}")
+            db.rollback()
+            QMessageBox.warning(self, "错误", f"删除好友失败: {e}")
+        finally:
+            db.close()
+        # 刷新好友列表
+        QTimer.singleShot(0, self.show_personal_friends_page)
 
     def show_friend_page(self, friend_name):
         self.ui.stackedWidget_Window.setCurrentIndex(3)
