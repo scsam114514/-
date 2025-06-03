@@ -3,7 +3,7 @@ from LogIn import Ui_LRMainWindow
 from testwindow import Ui_testwindow  # 假设testshowmenu.py中定义了Ui_MainWindow类
 from mainManufacturerWindow import Ui_ManufacturerWindow
 from PyQt5 import QtCore, QtWidgets, QtGui
-from PyQt5.QtWidgets import QFrame, QApplication,QHBoxLayout,QScrollArea,QPlainTextEdit, QLabel,QMainWindow, QDesktopWidget, QPushButton, QVBoxLayout, QWidget
+from PyQt5.QtWidgets import QFrame, QApplication,QMessageBox,QHBoxLayout,QScrollArea,QPlainTextEdit, QLabel,QMainWindow, QDesktopWidget, QPushButton, QVBoxLayout, QWidget
 import sys
 import pymysql
 import datetime
@@ -916,9 +916,7 @@ class MainUserWindow(QtWidgets.QMainWindow):
             new_friend_id = cursor.fetchone()
 
             if not new_friend_id:
-                print(f"用户 {new_friend_name} 不存在")
-                QtWidgets.QMessageBox.warning(self, "错误", f"用户 {new_friend_name} 不存在！")
-                self.ui.success_error_Type.setCurrentIndex(3)  # 假设索引 3 表示用户不存在的错误
+                QMessageBox.warning(self, "提示", f"用户 {new_friend_name} 不存在")
                 return
 
             new_friend_id = new_friend_id[0]  # 获取实际ID值
@@ -933,15 +931,10 @@ class MainUserWindow(QtWidgets.QMainWindow):
 
             if existing_relation:
                 if existing_relation[0] == 1:
-                    print("你们已经是好友了")
-                    QtWidgets.QMessageBox.information(self, "提示", "你们已经是好友了！")
-                    self.ui.success_error_Type.setCurrentIndex(5)  # 假设索引 5 表示已经是好友
-                    return
+                    QMessageBox.information(self, "提示", "你们已经是好友了")
                 elif existing_relation[0] == 0:
-                    print("已发送过好友申请，等待对方处理")
-                    QtWidgets.QMessageBox.information(self, "提示", "已发送过好友申请，等待对方处理！")
-                    self.ui.success_error_Type.setCurrentIndex(6)  # 假设索引 6 表示已发送过申请
-                    return
+                    QMessageBox.information(self, "提示", "好友申请已存在")
+                return
 
             # 3. 插入好友申请
             cursor.execute("""
@@ -950,20 +943,14 @@ class MainUserWindow(QtWidgets.QMainWindow):
             """, (USERID, new_friend_id))
 
             db.commit()
-            print(f"已向 {new_friend_name} 发送好友申请")
-            QtWidgets.QMessageBox.information(self, "成功", f"已向 {new_friend_name} 发送好友申请！")
-            self.ui.success_error_Type.setCurrentIndex(1)  # 假设索引 1 表示操作成功
+            QMessageBox.information(self, "提示", f"已向 {new_friend_name} 发送好友申请")
 
         except pymysql.MySQLError as e:
-            print(f"数据库错误: {e}")
-            QtWidgets.QMessageBox.critical(self, "错误", f"数据库错误: {e}")
-            self.ui.success_error_Type.setCurrentIndex(3)  # 数据库错误
+            QMessageBox.critical(self, "错误", f"数据库错误: {e}")
             if 'db' in locals():
                 db.rollback()
         except Exception as e:
-            print(f"其他错误: {e}")
-            QtWidgets.QMessageBox.critical(self, "错误", f"发生错误: {e}")
-            self.ui.success_error_Type.setCurrentIndex(3)  # 其他错误
+            QMessageBox.critical(self, "错误", f"其他错误: {e}")
         finally:
             if 'cursor' in locals():
                 cursor.close()
