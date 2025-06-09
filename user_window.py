@@ -7,21 +7,21 @@ import pymysql
 import datetime
 
 class MainUserWindow(QtWidgets.QMainWindow):
-    new_game_score = 1
-    evaluation_frames = []
-    test01 = 0
-    is_paying = False  # 新增标志变量，防止重复支付
+    new_game_score = 1  # 新游戏评分默认值
+    evaluation_frames = []  # 存储评价框架的列表
+    test01 = 0  # 测试变量
 
     def __init__(self, user_id):
         super().__init__()
-        self.user_id = user_id
-        self.ui = Ui_testwindow()
+        self.user_id = user_id  # 保存用户ID
+        self.ui = Ui_testwindow()  # 初始化UI
         self.ui.setupUi(self)
-        self.ui.stackedWidget_Window.setCurrentIndex(0)
+        self.ui.stackedWidget_Window.setCurrentIndex(0)  # 设置主窗口默认页面
 
+        # 设置无边框窗口并启用透明背景
         self.setWindowFlag(QtCore.Qt.FramelessWindowHint)
         self.setAttribute(QtCore.Qt.WA_TranslucentBackground)
-        self.center()
+        self.center()  # 窗口居中
 
         # 一次性连接所有按钮信号
         self.ui.pushButton_ShowUserFriends.clicked.connect(self.show_personal_friends_page)
@@ -35,8 +35,10 @@ class MainUserWindow(QtWidgets.QMainWindow):
         self.ui.pushButton_GoFriendPage.clicked.connect(self.show_personal_friends_page)
         self.ui.pushButton_GoGameLibraryPage.clicked.connect(self.show_personal_gamelibrary_page)
         self.ui.pushButton_GoShoppingCartPage.clicked.connect(self.show_personal_shoppingcart_page)
+        self.ui.pushButton_KeepShopping.clicked.connect(self.show_allgames_page)  # 继续购物按钮
+        self.ui.pushButton_Pay.clicked.connect(self.pay_for_game)  # 支付按钮信号连接
 
-        # 退出按钮
+        # 创建退出按钮
         exit_button = QPushButton(self)
         exit_button.setText("X")
         exit_button.setGeometry(QtCore.QRect(self.width() - 50, 10, 40, 40))
@@ -53,9 +55,11 @@ class MainUserWindow(QtWidgets.QMainWindow):
         """)
         exit_button.clicked.connect(self.close)
 
+        # 设置滚动区域布局
         self.scrollAreaLayout = QVBoxLayout(self.ui.scrollAreaWidgetContents_3)
         self.ui.scrollAreaWidgetContents_3.setLayout(self.scrollAreaLayout)
 
+        # 获取用户名并设置到个人页面按钮
         db = pymysql.connect(host="localhost", user="root", password='123456', port=3306, db='game_system')
         cursor = db.cursor()
         cursor.execute("SELECT ACCOUNT_NUMBER FROM user WHERE USER_ID = %s", (self.user_id,))
@@ -65,18 +69,20 @@ class MainUserWindow(QtWidgets.QMainWindow):
         if user_name:
             self.ui.pushButton_GoPersonalPage.setText(user_name[0])
         else:
-            print("No user found with the given ID")
+            print("未找到对应ID的用户")
 
-        self.show_allgames_page()
-        self.show()
+        self.show_allgames_page()  # 显示所有游戏页面
+        self.show()  # 显示窗口
 
     def center(self):
+        """将窗口居中显示"""
         qr = self.frameGeometry()
-        cp = QtWidgets.QDesktopWidget().availableGeometry().center()
+        cp = QDesktopWidget().availableGeometry().center()
         qr.moveCenter(cp)
         self.move(qr.topLeft())
 
     def show_allgames_page(self):
+        """显示所有游戏页面"""
         self.ui.stackedWidget_Window.setCurrentIndex(0)
         db = pymysql.connect(host="localhost", user="root", password='123456', port=3306, db='game_system')
         cursor = db.cursor()
@@ -92,6 +98,7 @@ class MainUserWindow(QtWidgets.QMainWindow):
             y += 160
 
     def add_page(self, x, y, name, introduction, cost):
+        """添加游戏页面到滚动区域"""
         frame = QFrame(parent=self.ui.scrollAreaWidgetContents)
         frame.move(x, y)
         frame.setMinimumSize(615, 150)
@@ -152,6 +159,7 @@ class MainUserWindow(QtWidgets.QMainWindow):
         game_frame.addLayout(horizontalLayout_2)
 
     def add_game_to_shoppingcart(self, game_name, user_id):
+        """将游戏添加到购物车"""
         with pymysql.connect(host="localhost", user="root", password='123456', port=3306, db='game_system') as db:
             cursor = db.cursor()
             cursor.execute("SELECT GAME_ID FROM having_games WHERE USER_ID = %s", (user_id,))
@@ -187,30 +195,26 @@ class MainUserWindow(QtWidgets.QMainWindow):
                 db.commit()
                 QMessageBox.information(self, "提示", f"游戏 {game_name} 已成功添加到购物车！")
 
-    def pay_for_game(self, order_id):
-        if self.is_paying:
-            return
-        self.is_paying = True
-        self.ui.pushButton_Pay.setEnabled(False)
-        message_shown = False
-        try:
-            with pymysql.connect(host="localhost", user="root", password='123456', port=3306, db='game_system') as db:
-                cursor = db.cursor()
-                cursor.execute("SELECT ORDER_ID FROM order_for_goods WHERE ORDER_ID = %s AND USER_ID = %s AND ORDER_STATE = 0",
-                               (order_id, self.user_id))
-                if not cursor.fetchone():
-                    if not message_shown:
-                        QMessageBox.warning(self, "提示", "订单无效或已支付！")
-                        message_shown = True
+    def pay_for_game(self):
+        """处理支付逻辑"""
+        with pymysql.connect(host="localhost", user="root", password='123456', port=3306, db='game_system') as db:
+            cursor = db.cursor()
+            try:
+                # 检查是否存在未支付订单
+                cursor.execute("SELECT ORDER_ID FROM order_for_goods WHERE USER_ID = %s AND ORDER_STATE = 0", (self.user_id,))
+                order_id = cursor.fetchone()
+                if not order_id:
+                    QMessageBox.warning(self, "提示", "没有未支付的订单！")
                     return
+                order_id = order_id[0]
+                # 检查购物车是否为空
                 cursor.execute("SELECT GAME_ID FROM order_details WHERE ORDER_ID = %s AND BUY_OR_REFUND = 0",
                                (order_id,))
                 purchased_game_ids = cursor.fetchall()
                 if not purchased_game_ids:
-                    if not message_shown:
-                        QMessageBox.warning(self, "提示", "购物车为空，无法支付！")
-                        message_shown = True
+                    QMessageBox.warning(self, "提示", "购物车为空，无法支付！")
                     return
+                # 更新订单详情和订单状态
                 for game_id in purchased_game_ids:
                     cursor.execute(
                         "UPDATE order_details SET BUY_OR_REFUND = 1 WHERE GAME_ID = %s AND BUY_OR_REFUND = 0 AND ORDER_ID = %s",
@@ -218,26 +222,22 @@ class MainUserWindow(QtWidgets.QMainWindow):
                 cursor.execute(
                     "UPDATE order_for_goods SET ORDER_STATE = 1 WHERE USER_ID = %s AND ORDER_STATE = 0 AND ORDER_ID = %s",
                     (self.user_id, order_id))
+                # 将游戏添加到用户游戏库
                 now_time = datetime.datetime.now()
                 for game_id in purchased_game_ids:
                     cursor.execute("INSERT IGNORE INTO having_games (USER_ID, GAME_ID, BUY_TIME) VALUES (%s, %s, %s)",
                                    (self.user_id, game_id[0], now_time))
                 db.commit()
-                if not message_shown:
-                    QMessageBox.information(self, "提示", "支付成功，游戏已添加到您的游戏库！")
-                    message_shown = True
-        except Exception as e:
-            print(f"支付过程中发生错误: {e}")
-            db.rollback()
-            if not message_shown:
-                QMessageBox.warning(self, "错误", f"支付失败: {e}")
-                message_shown = True
-        finally:
-            self.is_paying = False
-            self.ui.pushButton_Pay.setEnabled(True)
-            QTimer.singleShot(0, lambda: self.reload_shopping_cart(order_id))
+                QMessageBox.information(self, "提示", "支付成功，游戏已添加到您的游戏库！")
+                # 刷新购物车
+                QTimer.singleShot(0, lambda: self.reload_shopping_cart(order_id))
+            except Exception as e:
+                db.rollback()
+                QMessageBox.warning(self, "错误", f"支付失败: {str(e)}")
+                print(f"支付过程中发生错误: {e}")
 
     def remove_games_from_shoppingcart(self, order_id, game_name):
+        """从购物车移除游戏"""
         db = pymysql.connect(host="localhost", user="root", password='123456', port=3306, db='game_system')
         cursor = db.cursor()
         try:
@@ -249,7 +249,7 @@ class MainUserWindow(QtWidgets.QMainWindow):
                 db.commit()
                 QMessageBox.information(self, "提示", f"游戏 {game_name} 已从购物车移除！")
         except Exception as e:
-            print(f"An error occurred: {e}")
+            print(f"移除游戏时发生错误: {e}")
             db.rollback()
             QMessageBox.warning(self, "错误", f"移除游戏失败: {e}")
         finally:
@@ -257,6 +257,7 @@ class MainUserWindow(QtWidgets.QMainWindow):
         QTimer.singleShot(0, lambda: self.reload_shopping_cart(order_id))
 
     def remove_games_from_gamelirary(self, game_name):
+        """从游戏库移除游戏"""
         db = pymysql.connect(host="localhost", user="root", password='123456', port=3306, db='game_system')
         cursor = db.cursor()
         try:
@@ -289,6 +290,7 @@ class MainUserWindow(QtWidgets.QMainWindow):
             db.close()
 
     def show_searchgame_page(self):
+        """显示搜索游戏页面"""
         self.ui.stackedWidget_Window.setCurrentIndex(1)
         for widget in self.ui.scrollAreaWidgetContents_3.findChildren(QWidget):
             widget.deleteLater()
@@ -307,6 +309,7 @@ class MainUserWindow(QtWidgets.QMainWindow):
                 ny += 160
 
     def add_searched_page(self, x, y, name, introduction, cost):
+        """添加搜索到的游戏页面"""
         frame = QFrame(parent=self.ui.scrollAreaWidgetContents_3)
         frame.move(x, y)
         frame.setMinimumSize(615, 150)
@@ -322,7 +325,9 @@ class MainUserWindow(QtWidgets.QMainWindow):
             QPushButton {
                 background-color: rgb(255, 255, 255,20);
                 font: 15pt "微软雅黑";
-                color: rgb(255, 255, 255);
+                color:
+
+ rgb(255, 255, 255);
                 text-align: left;
                 border: none;
                 padding: 5px;
@@ -368,10 +373,10 @@ class MainUserWindow(QtWidgets.QMainWindow):
         frame.show()
 
     def show_personal_friends_page(self):
+        """显示个人好友页面"""
         self.ui.stackedWidget_Window.setCurrentIndex(2)
         self.ui.stackedWidget_userFriendPage.setCurrentIndex(0)
 
-        # 清除现有好友控件
         for widget in self.ui.scrollAreaWidgetContents_2.findChildren(QWidget):
             widget.deleteLater()
 
@@ -399,6 +404,7 @@ class MainUserWindow(QtWidgets.QMainWindow):
             db.close()
 
     def add_user_friends(self, x, y, name):
+        """添加好友到好友列表"""
         frame_Friend = QFrame(parent=self.ui.scrollAreaWidgetContents_2)
         frame_Friend.move(x, y)
         frame_Friend.setMinimumSize(250, 80)
@@ -419,7 +425,6 @@ class MainUserWindow(QtWidgets.QMainWindow):
         label_FriendName.setGeometry(QtCore.QRect(90, 30, 141, 21))
         label_FriendName.setText(name)
 
-        # 新增“删除好友”按钮
         pushButton_Delete = QPushButton(frame_Friend)
         pushButton_Delete.setGeometry(QtCore.QRect(170, 50, 75, 20))
         pushButton_Delete.setStyleSheet("background-color: rgb(154, 231, 231); color: rgb(255, 255, 255);")
@@ -429,6 +434,7 @@ class MainUserWindow(QtWidgets.QMainWindow):
         frame_Friend.show()
 
     def delete_friend(self, friend_name):
+        """删除好友"""
         db = pymysql.connect(host="localhost", user="root", password='123456', port=3306, db='game_system')
         cursor = db.cursor()
         try:
@@ -438,7 +444,6 @@ class MainUserWindow(QtWidgets.QMainWindow):
                 QMessageBox.warning(self, "提示", f"用户 {friend_name} 不存在")
                 return
             friend_id = friend_id_result[0]
-            # 删除双向好友关系
             cursor.execute("DELETE FROM friend WHERE USER_ID = %s AND FRIEND_ID = %s AND STATE = 1",
                            (self.user_id, friend_id))
             cursor.execute("DELETE FROM friend WHERE USER_ID = %s AND FRIEND_ID = %s AND STATE = 1",
@@ -451,14 +456,15 @@ class MainUserWindow(QtWidgets.QMainWindow):
             QMessageBox.warning(self, "错误", f"删除好友失败: {e}")
         finally:
             db.close()
-        # 刷新好友列表
         QTimer.singleShot(0, self.show_personal_friends_page)
 
     def show_friend_page(self, friend_name):
+        """显示好友详情页面"""
         self.ui.stackedWidget_Window.setCurrentIndex(3)
         self.ui.label_Show_FriendName.setText(friend_name)
 
     def show_addfriend_page(self):
+        """显示添加好友页面"""
         db = pymysql.connect(host="localhost", user="root", password='123456', port=3306, db='game_system')
         cursor = db.cursor()
         new_searched_friendname = self.ui.lineEdit_addSearchName.text()
@@ -473,6 +479,7 @@ class MainUserWindow(QtWidgets.QMainWindow):
         db.close()
 
     def add_searched_friend_page(self, x, y, friend_name):
+        """添加搜索到的好友页面"""
         frame_Friend = QFrame(parent=self.ui.frame_showSearchedPage)
         frame_Friend.move(x, y)
         frame_Friend.setMinimumSize(440, 200)
@@ -482,22 +489,25 @@ class MainUserWindow(QtWidgets.QMainWindow):
         pushButton_Friend.setGeometry(QtCore.QRect(310, 50, 100, 100))
         pushButton_Friend.setText("")
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap(":/icon/u=772358879,2131786806&fm=253&fmt=auto&app=138&f=JPEG.webp"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon.addPixmap(QtGui.QPixmap(":/icon/u=772358879,2131786806&fm=253&fmt=auto&app=138&f=JPEG.webp"),
+                       QtGui.QIcon.Normal, QtGui.QIcon.Off)
         pushButton_Friend.setIcon(icon)
         pushButton_Friend.setIconSize(QtCore.QSize(100, 100))
-        pushButton_Friend.clicked.connect(lambda checked, name=friend_name: self.safe_add_friend_request(name))
+        pushButton_Friend.clicked.connect(lambda: self.safe_add_friend_request(friend_name))
         label_FriendName = QLabel(frame_Friend)
         label_FriendName.setGeometry(QtCore.QRect(30, 50, 300, 100))
         label_FriendName.setText(friend_name)
         frame_Friend.show()
 
     def safe_add_friend_request(self, friend_name):
+        """安全添加好友请求"""
         try:
             self.add_user_friendrequest(friend_name)
         except Exception as e:
             print(f"添加好友请求时出错: {e}")
 
     def add_user_friendrequest(self, new_friend_name):
+        """发送好友请求"""
         db = pymysql.connect(host="localhost", user="root", password='123456', port=3306, db='game_system')
         cursor = db.cursor()
         cursor.execute("SELECT USER_ID FROM user WHERE ACCOUNT_NUMBER = %s", (new_friend_name,))
@@ -520,6 +530,7 @@ class MainUserWindow(QtWidgets.QMainWindow):
         db.close()
 
     def show_friend_games(self, friend_name):
+        """显示好友游戏库"""
         for widget in self.ui.scrollAreaWidgetContents_GameLibrary.findChildren(QWidget):
             widget.deleteLater()
         QApplication.processEvents()
@@ -539,6 +550,7 @@ class MainUserWindow(QtWidgets.QMainWindow):
         db.close()
 
     def add_friend_game(self, x, y, game_name):
+        """添加好友游戏到游戏库显示"""
         frame_gamelibrary = QFrame(self.ui.scrollAreaWidgetContents_GameLibrary)
         frame_gamelibrary.move(x, y)
         frame_gamelibrary.setMinimumSize(506, 70)
@@ -551,10 +563,11 @@ class MainUserWindow(QtWidgets.QMainWindow):
         frame_gamelibrary.show()
 
     def show_application_page(self):
+        """显示好友申请页面"""
         self.ui.stackedWidget_userFriendPage.setCurrentIndex(2)
         db = pymysql.connect(host="localhost", user="root", password='123456', port=3306, db='game_system')
         cursor = db.cursor()
-        cursor.execute("SELECT u.ACCOUNT_NUMBER FROM friend f JOIN user u ON f.USER_ID = u.USER_ID WHERE FRIEND_ID = %s AND STATE = 0", (self.user_id,))
+        cursor.execute("SELECT u.ACCOUNT_NUMBER FROM friend f JOIN user u ON f.USER_ID = u.USER_ID WHERE f.FRIEND_ID = %s AND STATE = 0", (self.user_id,))
         user_names = cursor.fetchall()
         db.close()
         x, y = 40, 20
@@ -563,6 +576,7 @@ class MainUserWindow(QtWidgets.QMainWindow):
             y += 80
 
     def add_application_user(self, x, y, username):
+        """添加好友申请用户到显示区域"""
         frame_applicationuser = QFrame(self.ui.scrollAreaWidgetContents_applicationUser)
         frame_applicationuser.move(x, y)
         frame_applicationuser.setMinimumSize(700, 70)
@@ -585,6 +599,7 @@ class MainUserWindow(QtWidgets.QMainWindow):
         frame_applicationuser.show()
 
     def agree_friend(self, friendname):
+        """同意好友请求"""
         db = pymysql.connect(host="localhost", user="root", password='123456', port=3306, db='game_system')
         cursor = db.cursor()
         try:
@@ -607,6 +622,7 @@ class MainUserWindow(QtWidgets.QMainWindow):
         QTimer.singleShot(0, self.reload_application)
 
     def reload_application(self):
+        """重新加载好友申请页面"""
         for child in self.ui.scrollAreaWidgetContents_applicationUser.findChildren(QWidget):
             child.deleteLater()
 
@@ -614,7 +630,7 @@ class MainUserWindow(QtWidgets.QMainWindow):
         cursor = db.cursor()
         try:
             cursor.execute(
-                "SELECT u.ACCOUNT_NUMBER FROM friend f JOIN user u ON f.USER_ID = u.USER_ID WHERE FRIEND_ID = %s AND STATE = 0",
+                "SELECT u.ACCOUNT_NUMBER FROM friend f JOIN user u ON f.USER_ID = u.USER_ID WHERE f.FRIEND_ID = %s AND STATE = 0",
                 (self.user_id,))
             user_names = cursor.fetchall()
             x, y = 40, 20
@@ -627,6 +643,7 @@ class MainUserWindow(QtWidgets.QMainWindow):
             db.close()
 
     def disagree_friend(self, friendname):
+        """拒绝好友请求"""
         db = pymysql.connect(host="localhost", user="root", password='123456', port=3306, db='game_system')
         cursor = db.cursor()
         cursor.execute("SELECT USER_ID FROM user WHERE ACCOUNT_NUMBER = %s", (friendname,))
@@ -637,6 +654,7 @@ class MainUserWindow(QtWidgets.QMainWindow):
         self.reload_application()
 
     def show_personal_gamelibrary_page(self):
+        """显示个人游戏库页面"""
         self.ui.stackedWidget_Window.setCurrentIndex(4)
         self.ui.listWidget_3.clear()
         with pymysql.connect(host="localhost", user="root", password='123456', port=3306, db='game_system') as db:
@@ -658,6 +676,7 @@ class MainUserWindow(QtWidgets.QMainWindow):
             self.filter_games_by_type(all_item)
 
     def filter_games_by_type(self, item):
+        """按游戏类型过滤游戏"""
         selected_type = item.data(QtCore.Qt.UserRole)
         for widget in self.ui.scrollAreaWidgetContents_GameLibrary.findChildren(QWidget):
             widget.deleteLater()
@@ -675,6 +694,7 @@ class MainUserWindow(QtWidgets.QMainWindow):
                 y += 90
 
     def add_gamelibrary_page(self, x, y, game_name):
+        """添加游戏到游戏库显示"""
         frame_gamelibrary = QFrame(self.ui.scrollAreaWidgetContents_GameLibrary)
         frame_gamelibrary.move(x, y)
         frame_gamelibrary.setMinimumSize(506, 70)
@@ -692,6 +712,7 @@ class MainUserWindow(QtWidgets.QMainWindow):
         pushButton_StartGame = QPushButton(frame_gamelibrary)
         pushButton_StartGame.setGeometry(QtCore.QRect(420, 40, 75, 23))
         pushButton_StartGame.setStyleSheet("background-color: rgb(154, 231, 231); color: rgb(255, 255, 255);")
+        pushButton_StartGame.setText("开始游戏")
         pushButton_Remove = QPushButton(frame_gamelibrary)
         pushButton_Remove.setGeometry(QtCore.QRect(260, 40, 75, 23))
         pushButton_Remove.setStyleSheet("background-color: rgb(92, 138, 0); color: rgb(255, 255, 255);")
@@ -700,6 +721,7 @@ class MainUserWindow(QtWidgets.QMainWindow):
         frame_gamelibrary.show()
 
     def evaluate_game_page(self, game_name):
+        """显示游戏评价页面"""
         for frame in self.evaluation_frames:
             frame.deleteLater()
         self.evaluation_frames.clear()
@@ -716,15 +738,16 @@ class MainUserWindow(QtWidgets.QMainWindow):
         cursor.execute("SELECT GAME_ID FROM game WHERE GAME_NAME = %s", (game_name,))
         game_id = cursor.fetchone()
         if game_id:
-            cursor.execute("SELECT COUNT(*) FROM evaluatetable WHERE GAME_ID = %s", (game_id,))
+            cursor.execute("SELECT COUNT(*) FROM evaluatetable WHERE GAME_ID = %s", (game_id[0],))
             evaluate_count = int(cursor.fetchone()[0])
             if evaluate_count:
-                cursor.execute("SELECT e.EVALUATE, e.EVALUATE_DATE, e.SCORE, u.ACCOUNT_NUMBER FROM evaluatetable e JOIN user u ON e.USER_ID = u.USER_ID WHERE e.GAME_ID = %s", (game_id,))
+                cursor.execute("SELECT e.EVALUATE, e.EVALUATE_DATE, e.SCORE, u.ACCOUNT_NUMBER FROM evaluatetable e JOIN user u ON e.USER_ID = u.USER_ID WHERE e.GAME_ID = %s", (game_id[0],))
                 all_evaluates = cursor.fetchall()
                 self.show_game_evaluate(game_id[0])
         db.close()
 
     def post_evaluate(self, game_name):
+        """发布游戏评价"""
         new_game_evaluate = self.ui.textEdit_evaluate.toPlainText()
         db = pymysql.connect(host="localhost", user="root", password='123456', port=3306, db='game_system')
         cursor = db.cursor()
@@ -741,18 +764,21 @@ class MainUserWindow(QtWidgets.QMainWindow):
                 self.ui.success_error_Type.setCurrentIndex(1)
                 self.show_game_evaluate(game_id)
             except pymysql.MySQLError as e:
-                print(f"Database Error: {e}")
+                print(f"数据库错误: {e}")
                 db.rollback()
                 self.ui.success_error_Type.setCurrentIndex(2)
         db.close()
 
     def clicked_recommend_button(self):
+        """点击推荐按钮"""
         self.new_game_score = 1
 
     def clicked_disrecommend_button(self):
+        """点击不推荐按钮"""
         self.new_game_score = 0
 
     def show_game_evaluate(self, game_id):
+        """显示游戏评价"""
         self.ui.stackedWidget_Window.setCurrentIndex(7)
         db = pymysql.connect(host="localhost", user="root", password='123456', port=3306, db='game_system')
         cursor = db.cursor()
@@ -761,18 +787,19 @@ class MainUserWindow(QtWidgets.QMainWindow):
         cursor.execute("SELECT e.EVALUATE, e.EVALUATE_DATE, e.SCORE, u.ACCOUNT_NUMBER FROM evaluatetable e JOIN user u ON e.USER_ID = u.USER_ID WHERE e.GAME_ID = %s", (game_id,))
         all_evaluate = list(cursor.fetchall())
         db.close()
-        x, y = 53, 50
+        x, y = 53, 630
         for i in range(evaluate_count):
             frame = self.add_game_evaluate(x, y, all_evaluate[i][3], all_evaluate[i][0], all_evaluate[i][2])
             self.evaluation_frames.append(frame)
             y += 230
 
     def add_game_evaluate(self, x, y, user_name, evaluate, score):
+        """添加游戏评价到显示区域"""
         frame = QFrame(parent=self.ui.scrollAreaWidgetContents_5)
         frame.move(x, y)
-        frame.setMinimumSize(900, 50)
-        frame.setMaximumSize(900, 100)
-        frame.setStyleSheet("background-color: rgb(50, 50, 89);")
+        frame.setMinimumSize(900, 200)
+        frame.setMaximumSize(900, 200)
+        frame.setStyleSheet("background-color: rgb(59, 59, 89);")
         layoutWidget = QWidget(frame)
         layoutWidget.setGeometry(QtCore.QRect(0, 0, 900, 200))
         frame_evaluate = QVBoxLayout(layoutWidget)
@@ -795,10 +822,12 @@ class MainUserWindow(QtWidgets.QMainWindow):
         return frame
 
     def show_user_page(self, user_name):
+        """显示用户页面"""
         self.ui.stackedWidget_Window.setCurrentIndex(3)
         self.ui.label_Show_FriendName.setText(user_name)
 
     def reload_gamelibrary(self):
+        """重新加载游戏库"""
         for child in self.ui.scrollAreaWidgetContents_GameLibrary.findChildren(QWidget):
             child.deleteLater()
         QApplication.processEvents()
@@ -819,38 +848,38 @@ class MainUserWindow(QtWidgets.QMainWindow):
             y += 90
 
     def show_personal_shoppingcart_page(self):
+        """显示个人购物车页面"""
         self.ui.stackedWidget_Window.setCurrentIndex(5)
+        for child in self.ui.scrollAreaWidgetContents_Shoppingcart.findChildren(QWidget):
+            if child.objectName() != "emptyCartLabel":
+                child.deleteLater()
+        self.ui.label_showAllPrice.clear()
+        QApplication.processEvents()
         with pymysql.connect(host="localhost", user="root", password='123456', port=3306, db='game_system') as db:
             cursor = db.cursor()
             cursor.execute("SELECT ORDER_ID FROM order_for_goods WHERE USER_ID = %s AND ORDER_STATE = 0", (self.user_id,))
             order_id = cursor.fetchone()
             if order_id:
-                cursor.execute("SELECT GAME_ID FROM order_details WHERE ORDER_ID = %s", (order_id[0],))
+                cursor.execute("SELECT GAME_ID FROM order_details WHERE ORDER_ID = %s AND BUY_OR_REFUND = 0", (order_id[0],))
                 game_already_in_cart_id = cursor.fetchall()
-                game_ids_str = ', '.join(str(id[0]) for id in game_already_in_cart_id)
+                game_ids_str = ', '.join(str(id[0]) for id in game_already_in_cart_id) if game_already_in_cart_id else ''
                 if game_ids_str:
                     cursor.execute(f"SELECT GAME_NAME, PRICE FROM game WHERE GAME_ID IN ({game_ids_str})")
                     game_already_in_cart = cursor.fetchall()
+                    x, y = 10, 10
+                    all_price = 0
+                    for game in game_already_in_cart:
+                        self.add_shoppingcartgame_page(x, y, order_id[0], game[0], game[1])
+                        all_price += float(game[1])
+                        y += 110
+                    self.ui.label_showAllPrice.setText(str(all_price))
                 else:
-                    return
+                    self.ui.label_showAllPrice.setText("0")
             else:
-                return
-        # 断开之前的信号连接
-        try:
-            self.ui.pushButton_Pay.clicked.disconnect()
-        except:
-            pass
-        self.ui.pushButton_KeepShopping.clicked.connect(self.show_allgames_page)
-        self.ui.pushButton_Pay.clicked.connect(lambda: self.pay_for_game(order_id[0]))
-        x, y = 10, 10
-        all_price = 0
-        for game in game_already_in_cart:
-            self.add_shoppingcartgame_page(x, y, order_id[0], game[0], game[1])
-            all_price += game[1]
-            y += 110
-        self.ui.label_showAllPrice.setText(str(all_price))
+                self.ui.label_showAllPrice.setText("0")
 
     def add_shoppingcartgame_page(self, x, y, order_id, game_name, game_price):
+        """添加购物车游戏到显示区域"""
         frame_shopingcartgame = QFrame(parent=self.ui.scrollAreaWidgetContents_Shoppingcart)
         frame_shopingcartgame.move(x, y)
         frame_shopingcartgame.setMinimumSize(565, 100)
@@ -872,6 +901,7 @@ class MainUserWindow(QtWidgets.QMainWindow):
         frame_shopingcartgame.show()
 
     def reload_shopping_cart(self, order_id):
+        """重新加载购物车"""
         for child in self.ui.scrollAreaWidgetContents_Shoppingcart.findChildren(QWidget):
             if child.objectName() != "emptyCartLabel":
                 child.deleteLater()
@@ -883,7 +913,7 @@ class MainUserWindow(QtWidgets.QMainWindow):
             order_id = cursor.fetchone()
             all_price = 0
             if order_id:
-                cursor.execute("SELECT GAME_ID FROM order_details WHERE ORDER_ID = %s", (order_id[0],))
+                cursor.execute("SELECT GAME_ID FROM order_details WHERE ORDER_ID = %s AND BUY_OR_REFUND = 0", (order_id[0],))
                 game_already_in_cart_id = cursor.fetchall()
                 game_ids_str = ', '.join(str(id[0]) for id in game_already_in_cart_id) if game_already_in_cart_id else ''
                 if game_ids_str:
@@ -901,4 +931,5 @@ class MainUserWindow(QtWidgets.QMainWindow):
                 self.ui.label_showAllPrice.setText("0")
 
     def test(self, testname):
+        """测试方法"""
         print(testname)
