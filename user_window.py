@@ -372,34 +372,76 @@ class MainUserWindow(QtWidgets.QMainWindow):
         game_frame.addLayout(horizontalLayout_2)
         frame.show()
 
+    # def show_personal_friends_page(self):
+    #     """显示个人好友页面"""
+    #     self.ui.stackedWidget_Window.setCurrentIndex(2)
+    #     self.ui.stackedWidget_userFriendPage.setCurrentIndex(0)
+    #
+    #     for widget in self.ui.scrollAreaWidgetContents_2.findChildren(QWidget):
+    #         widget.deleteLater()
+    #
+    #     db = pymysql.connect(host="localhost", user="root", password='123456', port=3306, db='game_system')
+    #     cursor = db.cursor()
+    #     try:
+    #         cursor.execute("SELECT ACCOUNT_NUMBER FROM user WHERE USER_ID = %s", (self.user_id,))
+    #         user_name = cursor.fetchone()
+    #         cursor.execute("SELECT COUNT(*) FROM friend WHERE USER_ID = %s", (self.user_id,))
+    #         friend_count = int(cursor.fetchone()[0])
+    #         cursor.execute(
+    #             "SELECT u.ACCOUNT_NUMBER FROM friend f JOIN user u ON f.FRIEND_ID = u.USER_ID WHERE f.USER_ID = %s AND f.STATE = 1",
+    #             (self.user_id,))
+    #         all_friend = list(cursor.fetchall())
+    #
+    #         x, y = 17, 10
+    #         if all_friend:
+    #             for i in range(friend_count):
+    #                 self.add_user_friends(x, y, all_friend[i][0])
+    #                 x += 267
+    #         self.ui.label_Show_UserName.setText(user_name[0] if user_name else "")
+    #     except Exception as e:
+    #         print(f"显示好友页面时出错: {e}")
+    #     finally:
+    #         db.close()
     def show_personal_friends_page(self):
         """显示个人好友页面"""
         self.ui.stackedWidget_Window.setCurrentIndex(2)
         self.ui.stackedWidget_userFriendPage.setCurrentIndex(0)
 
+        # 清空现有好友显示
         for widget in self.ui.scrollAreaWidgetContents_2.findChildren(QWidget):
             widget.deleteLater()
 
         db = pymysql.connect(host="localhost", user="root", password='123456', port=3306, db='game_system')
         cursor = db.cursor()
         try:
+            # 获取当前用户名
             cursor.execute("SELECT ACCOUNT_NUMBER FROM user WHERE USER_ID = %s", (self.user_id,))
             user_name = cursor.fetchone()
-            cursor.execute("SELECT COUNT(*) FROM friend WHERE USER_ID = %s", (self.user_id,))
-            friend_count = int(cursor.fetchone()[0])
+            self.ui.label_Show_UserName.setText(user_name[0] if user_name else "")
+
+            # 获取已确认的好友列表
             cursor.execute(
                 "SELECT u.ACCOUNT_NUMBER FROM friend f JOIN user u ON f.FRIEND_ID = u.USER_ID WHERE f.USER_ID = %s AND f.STATE = 1",
                 (self.user_id,))
             all_friend = list(cursor.fetchall())
 
+            # 显示好友
             x, y = 17, 10
             if all_friend:
-                for i in range(friend_count):
-                    self.add_user_friends(x, y, all_friend[i][0])
+                for friend in all_friend:
+                    self.add_user_friends(x, y, friend[0])
                     x += 267
-            self.ui.label_Show_UserName.setText(user_name[0] if user_name else "")
+            else:
+                # 如果没有好友，显示提示
+                label = QLabel(self.ui.scrollAreaWidgetContents_2)
+                label.setText("暂无好友")
+                label.setStyleSheet("color: rgb(255, 255, 255); font: 15pt '微软雅黑';")
+                label.move(20, 20)
+                label.show()
+
         except Exception as e:
             print(f"显示好友页面时出错: {e}")
+            QMessageBox.warning(self, "错误", f"加载好友列表失败: {str(e)}")
         finally:
             db.close()
 
