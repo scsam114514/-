@@ -868,26 +868,68 @@ class MainUserWindow(QtWidgets.QMainWindow):
         self.ui.stackedWidget_Window.setCurrentIndex(3)
         self.ui.label_Show_FriendName.setText(user_name)
 
+    # def reload_gamelibrary(self):
+    #     """重新加载游戏库"""
+    #     for child in self.ui.scrollAreaWidgetContents_GameLibrary.findChildren(QWidget):
+    #         child.deleteLater()
+    #     QApplication.processEvents()
+    #     db = pymysql.connect(host="localhost", user="root", password='123456', port=3306, db='game_system')
+    #     cursor = db.cursor()
+    #     cursor.execute("SELECT game_id FROM having_games WHERE USER_ID = %s", (self.user_id,))
+    #     game_ids = cursor.fetchall()
+    #     game_info_list = []
+    #     for game_id in game_ids:
+    #         cursor.execute("SELECT GAME_NAME FROM game WHERE GAME_ID = %s", (game_id[0],))
+    #         game_detail = cursor.fetchone()
+    #         if game_detail:
+    #             game_info_list.append(game_detail)
+    #     db.close()
+    #     x, y = 20, 20
+    #     for game_info in game_info_list:
+    #         self.add_gamelibrary_page(x, y, game_info[0])
+    #         y += 90
     def reload_gamelibrary(self):
-        """重新加载游戏库"""
+        """重新加载游戏库，包括游戏列表和类型列表"""
+        # 清空游戏显示区域
         for child in self.ui.scrollAreaWidgetContents_GameLibrary.findChildren(QWidget):
             child.deleteLater()
+
+        # 清空类型列表
+        self.ui.listWidget_3.clear()
+
         QApplication.processEvents()
-        db = pymysql.connect(host="localhost", user="root", password='123456', port=3306, db='game_system')
-        cursor = db.cursor()
-        cursor.execute("SELECT game_id FROM having_games WHERE USER_ID = %s", (self.user_id,))
-        game_ids = cursor.fetchall()
-        game_info_list = []
-        for game_id in game_ids:
-            cursor.execute("SELECT GAME_NAME FROM game WHERE GAME_ID = %s", (game_id[0],))
-            game_detail = cursor.fetchone()
-            if game_detail:
-                game_info_list.append(game_detail)
-        db.close()
-        x, y = 20, 20
-        for game_info in game_info_list:
-            self.add_gamelibrary_page(x, y, game_info[0])
-            y += 90
+
+        with pymysql.connect(host="localhost", user="root", password='123456', port=3306, db='game_system') as db:
+            cursor = db.cursor()
+
+            # 添加“全部”选项
+            all_item = QtWidgets.QListWidgetItem("全部")
+            all_item.setData(QtCore.Qt.UserRole, "all")
+            self.ui.listWidget_3.addItem(all_item)
+
+            # 查询用户拥有的游戏类型
+            cursor.execute(
+                "SELECT DISTINCT gt.TYPE_NAME FROM having_games hg JOIN GAME_TO_TYPE gt ON hg.GAME_ID = gt.GAME_ID WHERE hg.USER_ID = %s",
+                (self.user_id,)
+            )
+            game_types = cursor.fetchall()
+
+            # 添加类型到列表
+            for game_type in game_types:
+                item = QtWidgets.QListWidgetItem(game_type[0])
+                item.setData(QtCore.Qt.UserRole, game_type[0])
+                self.ui.listWidget_3.addItem(item)
+
+            # 断开和重新连接 itemClicked 信号
+            try:
+                self.ui.listWidget_3.itemClicked.disconnect()
+            except:
+                pass
+            self.ui.listWidget_3.itemClicked.connect(self.filter_games_by_type)
+
+            # 默认选中“全部”并刷新游戏列表
+            self.ui.listWidget_3.setCurrentItem(all_item)
+            self.filter_games_by_type(all_item)
 
     def show_personal_shoppingcart_page(self):
         """显示个人购物车页面"""
