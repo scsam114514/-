@@ -3,7 +3,7 @@ from LogIn import Ui_LRMainWindow
 from user_window import MainUserWindow
 from manufacturer_window import MainManufacturerWindow
 from PyQt5 import QtCore, QtWidgets, QtGui
-from PyQt5.QtWidgets import QFrame, QApplication, QMessageBox, QHBoxLayout, QScrollArea, QPlainTextEdit, QLabel, QMainWindow, QDesktopWidget, QPushButton, QVBoxLayout, QWidget
+from PyQt5.QtWidgets import QFrame, QApplication, QMessageBox, QHBoxLayout, QScrollArea, QPlainTextEdit, QLabel, QMainWindow, QDesktopWidget, QPushButton, QVBoxLayout, QWidget, QCheckBox
 import sys
 import pymysql
 import datetime
@@ -37,6 +37,102 @@ class LogInWindow(QtWidgets.QMainWindow):
         """)
         exit_button.clicked.connect(self.close)
 
+        # Add "Show Password" checkbox for user login page
+        self.show_password_user_login = QCheckBox(self.ui.page_UserLogin)
+        self.show_password_user_login.setStyleSheet("QCheckBox { color: white; spacing: 0px; } QCheckBox::indicator { width: 16px; height: 16px; }")
+        self.show_password_user_login.setText("")  # Remove text
+        self.show_password_user_login.stateChanged.connect(self.toggle_user_login_password)
+        layout = self.ui.page_UserLogin.layout()
+        index = layout.indexOf(self.ui.lineEdit_L_Password)
+        if index != -1:
+            hbox = QHBoxLayout()
+            hbox.addWidget(self.ui.lineEdit_L_Password)
+            hbox.addWidget(self.show_password_user_login)
+            hbox.setContentsMargins(0, 0, 0, 0)
+            hbox.setSpacing(5)
+            layout.replaceWidget(self.ui.lineEdit_L_Password, QWidget())
+            layout.insertLayout(index, hbox)
+
+        # Add "Show Password" checkbox for manufacturer login page
+        self.show_password_manufacturer_login = QCheckBox(self.ui.page_manufacturerLogin)
+        self.show_password_manufacturer_login.setStyleSheet("QCheckBox { color: white; spacing: 0px; } QCheckBox::indicator { width: 16px; height: 16px; }")
+        self.show_password_manufacturer_login.setText("")  # Remove text
+        self.show_password_manufacturer_login.stateChanged.connect(self.toggle_manufacturer_login_password)
+        layout = self.ui.page_manufacturerLogin.layout()
+        index = layout.indexOf(self.ui.lineEdit_L_Password_manufacturer)
+        if index != -1:
+            hbox = QHBoxLayout()
+            hbox.addWidget(self.ui.lineEdit_L_Password_manufacturer)
+            hbox.addWidget(self.show_password_manufacturer_login)
+            hbox.setContentsMargins(0, 0, 0, 0)
+            hbox.setSpacing(5)
+            layout.replaceWidget(self.ui.lineEdit_L_Password_manufacturer, QWidget())
+            layout.insertLayout(index, hbox)
+
+        # Add "Show Password" checkbox for user registration page (password)
+        self.show_password_user_reg = QCheckBox(self.ui.page_userRegister)
+        self.show_password_user_reg.setStyleSheet("QCheckBox { color: white; spacing: 0px; } QCheckBox::indicator { width: 16px; height: 16px; }")
+        self.show_password_user_reg.setText("")  # Remove text
+        self.show_password_user_reg.stateChanged.connect(self.toggle_user_reg_password)
+        layout = self.ui.page_userRegister.layout()
+        index = layout.indexOf(self.ui.lineEdit_User_R_Password)
+        if index != -1:
+            hbox = QHBoxLayout()
+            hbox.addWidget(self.ui.lineEdit_User_R_Password)
+            hbox.addWidget(self.show_password_user_reg)
+            hbox.setContentsMargins(0, 0, 0, 0)
+            hbox.setSpacing(5)
+            layout.replaceWidget(self.ui.lineEdit_User_R_Password, QWidget())
+            layout.insertLayout(index, hbox)
+
+        # Add "Show Password" checkbox for user registration page (check password)
+        self.show_check_password_user_reg = QCheckBox(self.ui.page_userRegister)
+        self.show_check_password_user_reg.setStyleSheet("QCheckBox { color: white; spacing: 0px; } QCheckBox::indicator { width: 16px; height: 16px; }")
+        self.show_check_password_user_reg.setText("")  # Remove text
+        self.show_check_password_user_reg.stateChanged.connect(self.toggle_user_reg_check_password)
+        layout = self.ui.page_userRegister.layout()
+        index = layout.indexOf(self.ui.lineEdit_User_R_CheckPassword)
+        if index != -1:
+            hbox = QHBoxLayout()
+            hbox.addWidget(self.ui.lineEdit_User_R_CheckPassword)
+            hbox.addWidget(self.show_check_password_user_reg)
+            hbox.setContentsMargins(0, 0, 0, 0)
+            hbox.setSpacing(5)
+            layout.replaceWidget(self.ui.lineEdit_User_R_CheckPassword, QWidget())
+            layout.insertLayout(index, hbox)
+
+        # Add "Show Password" checkbox for manufacturer registration page (password)
+        self.show_password_manufacturer_reg = QCheckBox(self.ui.page_manufacturerRregister)
+        self.show_password_manufacturer_reg.setStyleSheet("QCheckBox { color: white; spacing: 0px; } QCheckBox::indicator { width: 16px; height: 16px; }")
+        self.show_password_manufacturer_reg.setText("")  # Remove text
+        self.show_password_manufacturer_reg.stateChanged.connect(self.toggle_manufacturer_reg_password)
+        layout = self.ui.page_manufacturerRregister.layout()
+        index = layout.indexOf(self.ui.lineEdit_Manufacturer_R_Password)
+        if index != -1:
+            hbox = QHBoxLayout()
+            hbox.addWidget(self.ui.lineEdit_Manufacturer_R_Password)
+            hbox.addWidget(self.show_password_manufacturer_reg)
+            hbox.setContentsMargins(0, 0, 0, 0)
+            hbox.setSpacing(5)
+            layout.replaceWidget(self.ui.lineEdit_Manufacturer_R_Password, QWidget())
+            layout.insertLayout(index, hbox)
+
+        # Add "Show Password" checkbox for manufacturer registration page (check password)
+        self.show_check_password_manufacturer_reg = QCheckBox(self.ui.page_manufacturerRregister)
+        self.show_check_password_manufacturer_reg.setStyleSheet("QCheckBox { color: white; spacing: 0px; } QCheckBox::indicator { width: 16px; height: 16px; }")
+        self.show_check_password_manufacturer_reg.setText("")  # Remove text
+        self.show_check_password_manufacturer_reg.stateChanged.connect(self.toggle_manufacturer_reg_check_password)
+        layout = self.ui.page_manufacturerRregister.layout()
+        index = layout.indexOf(self.ui.lineEdit_Manufacturer_R_CheckPassword)
+        if index != -1:
+            hbox = QHBoxLayout()
+            hbox.addWidget(self.ui.lineEdit_Manufacturer_R_CheckPassword)
+            hbox.addWidget(self.show_check_password_manufacturer_reg)
+            hbox.setContentsMargins(0, 0, 0, 0)
+            hbox.setSpacing(5)
+            layout.replaceWidget(self.ui.lineEdit_Manufacturer_R_CheckPassword, QWidget())
+            layout.insertLayout(index, hbox)
+
         # Button connections
         self.ui.pushButton_switch.clicked.connect(lambda: self.switch_page(self.flag))
         self.ui.pushButton_LogIn.clicked.connect(lambda: self.ui.stackedWidget_LR.setCurrentIndex(self.flag))
@@ -49,6 +145,42 @@ class LogInWindow(QtWidgets.QMainWindow):
         # Initialize status
         self.ui.success_error_Type.setCurrentIndex(0)
         self.show()
+
+    def toggle_user_login_password(self, state):
+        if state == Qt.Checked:
+            self.ui.lineEdit_L_Password.setEchoMode(QtWidgets.QLineEdit.Normal)
+        else:
+            self.ui.lineEdit_L_Password.setEchoMode(QtWidgets.QLineEdit.Password)
+
+    def toggle_manufacturer_login_password(self, state):
+        if state == Qt.Checked:
+            self.ui.lineEdit_L_Password_manufacturer.setEchoMode(QtWidgets.QLineEdit.Normal)
+        else:
+            self.ui.lineEdit_L_Password_manufacturer.setEchoMode(QtWidgets.QLineEdit.Password)
+
+    def toggle_user_reg_password(self, state):
+        if state == Qt.Checked:
+            self.ui.lineEdit_User_R_Password.setEchoMode(QtWidgets.QLineEdit.Normal)
+        else:
+            self.ui.lineEdit_User_R_Password.setEchoMode(QtWidgets.QLineEdit.Password)
+
+    def toggle_user_reg_check_password(self, state):
+        if state == Qt.Checked:
+            self.ui.lineEdit_User_R_CheckPassword.setEchoMode(QtWidgets.QLineEdit.Normal)
+        else:
+            self.ui.lineEdit_User_R_CheckPassword.setEchoMode(QtWidgets.QLineEdit.Password)
+
+    def toggle_manufacturer_reg_password(self, state):
+        if state == Qt.Checked:
+            self.ui.lineEdit_Manufacturer_R_Password.setEchoMode(QtWidgets.QLineEdit.Normal)
+        else:
+            self.ui.lineEdit_Manufacturer_R_Password.setEchoMode(QtWidgets.QLineEdit.Password)
+
+    def toggle_manufacturer_reg_check_password(self, state):
+        if state == Qt.Checked:
+            self.ui.lineEdit_Manufacturer_R_CheckPassword.setEchoMode(QtWidgets.QLineEdit.Normal)
+        else:
+            self.ui.lineEdit_Manufacturer_R_CheckPassword.setEchoMode(QtWidgets.QLineEdit.Password)
 
     def switch_page(self, pageid):
         self.flag = (pageid + 1) % 2
@@ -169,3 +301,8 @@ class LogInWindow(QtWidgets.QMainWindow):
                 self.ui.success_error_Type.setCurrentIndex(3)
             finally:
                 db.close()
+
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    window = LogInWindow()
+    sys.exit(app.exec_())
