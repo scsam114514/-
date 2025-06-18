@@ -158,30 +158,77 @@ class MainUserWindow(QtWidgets.QMainWindow):
         horizontalLayout_2.addWidget(pushButton)
         game_frame.addLayout(horizontalLayout_2)
 
+    # def add_game_to_shoppingcart(self, game_name, user_id):
+    #     """将游戏添加到购物车"""
+    #     with pymysql.connect(host="localhost", user="root", password='123456', port=3306, db='game_system') as db:
+    #         cursor = db.cursor()
+    #         cursor.execute("SELECT GAME_ID FROM having_games WHERE USER_ID = %s", (user_id,))
+    #         all_having_games_ids = [id[0] for id in cursor.fetchall()]
+    #         cursor.execute("SELECT GAME_ID FROM game WHERE GAME_NAME = %s", (game_name,))
+    #         game_id = cursor.fetchone()
+    #         if game_id and game_id[0] in all_having_games_ids:
+    #             QMessageBox.warning(self, "提示", f"游戏 {game_name} 已在您的游戏库中，无法添加至购物车。")
+    #             return
+    #         cursor.execute("SELECT ORDER_ID FROM order_for_goods WHERE USER_ID = %s AND ORDER_STATE = 0", (user_id,))
+    #         order_id = cursor.fetchone()
+    #         if order_id:
+    #             cursor.execute("SELECT 1 FROM order_details WHERE ORDER_ID = %s AND GAME_ID = %s",
+    #                            (order_id[0], game_id[0]))
+    #             if not cursor.fetchone():
+    #                 now_date = datetime.datetime.now()
+    #                 cursor.execute(
+    #                     "INSERT INTO order_details (ORDER_ID, GAME_ID, DETAIL_TIME, BUY_OR_REFUND) VALUES (%s, %s, %s, 0)",
+    #                     (order_id[0], game_id[0], now_date))
+    #                 db.commit()
+    #                 QMessageBox.information(self, "提示", f"游戏 {game_name} 已成功添加到购物车！")
+    #         else:
+    #             now_date = datetime.datetime.now()
+    #             cursor.execute("INSERT INTO order_for_goods (USER_ID, ORDER_STATE, ORDER_TIME) VALUES (%s, 0, %s)",
+    #                            (user_id, now_date))
+    #             cursor.execute(
+    #                 "SELECT ORDER_ID FROM order_for_goods WHERE USER_ID = %s AND ORDER_STATE = 0 ORDER BY ORDER_ID DESC LIMIT 1",
+    #                 (user_id,))
+    #             new_order_id = cursor.fetchone()[0]
+    #             cursor.execute(
+    #                 "INSERT INTO order_details (ORDER_ID, GAME_ID, DETAIL_TIME, BUY_OR_REFUND) VALUES (%s, %s, %s, 0)",
+    #                 (new_order_id, game_id[0], now_date))
+    #             db.commit()
+    #             QMessageBox.information(self, "提示", f"游戏 {game_name} 已成功添加到购物车！")
     def add_game_to_shoppingcart(self, game_name, user_id):
         """将游戏添加到购物车"""
         with pymysql.connect(host="localhost", user="root", password='123456', port=3306, db='game_system') as db:
             cursor = db.cursor()
+            # 检查游戏是否已在用户游戏库中
             cursor.execute("SELECT GAME_ID FROM having_games WHERE USER_ID = %s", (user_id,))
             all_having_games_ids = [id[0] for id in cursor.fetchall()]
             cursor.execute("SELECT GAME_ID FROM game WHERE GAME_NAME = %s", (game_name,))
             game_id = cursor.fetchone()
-            if game_id and game_id[0] in all_having_games_ids:
+            if not game_id:
+                QMessageBox.warning(self, "提示", f"游戏 {game_name} 不存在。")
+                return
+            game_id = game_id[0]
+            if game_id in all_having_games_ids:
                 QMessageBox.warning(self, "提示", f"游戏 {game_name} 已在您的游戏库中，无法添加至购物车。")
                 return
+            # 检查是否存在未支付订单
             cursor.execute("SELECT ORDER_ID FROM order_for_goods WHERE USER_ID = %s AND ORDER_STATE = 0", (user_id,))
             order_id = cursor.fetchone()
             if order_id:
-                cursor.execute("SELECT 1 FROM order_details WHERE ORDER_ID = %s AND GAME_ID = %s",
-                               (order_id[0], game_id[0]))
-                if not cursor.fetchone():
-                    now_date = datetime.datetime.now()
-                    cursor.execute(
-                        "INSERT INTO order_details (ORDER_ID, GAME_ID, DETAIL_TIME, BUY_OR_REFUND) VALUES (%s, %s, %s, 0)",
-                        (order_id[0], game_id[0], now_date))
-                    db.commit()
-                    QMessageBox.information(self, "提示", f"游戏 {game_name} 已成功添加到购物车！")
+                # 检查游戏是否已在购物车中
+                cursor.execute("SELECT 1 FROM order_details WHERE ORDER_ID = %s AND GAME_ID = %s AND BUY_OR_REFUND = 0",
+                               (order_id[0], game_id))
+                if cursor.fetchone():
+                    QMessageBox.information(self, "提示", f"游戏 {game_name} 已在您的购物车中！")
+                    return
+                # 添加游戏到现有订单
+                now_date = datetime.datetime.now()
+                cursor.execute(
+                    "INSERT INTO order_details (ORDER_ID, GAME_ID, DETAIL_TIME, BUY_OR_REFUND) VALUES (%s, %s, %s, 0)",
+                    (order_id[0], game_id, now_date))
+                db.commit()
+                QMessageBox.information(self, "提示", f"游戏 {game_name} 已成功添加到购物车！")
             else:
+                # 创建新订单并添加游戏
                 now_date = datetime.datetime.now()
                 cursor.execute("INSERT INTO order_for_goods (USER_ID, ORDER_STATE, ORDER_TIME) VALUES (%s, 0, %s)",
                                (user_id, now_date))
@@ -191,7 +238,7 @@ class MainUserWindow(QtWidgets.QMainWindow):
                 new_order_id = cursor.fetchone()[0]
                 cursor.execute(
                     "INSERT INTO order_details (ORDER_ID, GAME_ID, DETAIL_TIME, BUY_OR_REFUND) VALUES (%s, %s, %s, 0)",
-                    (new_order_id, game_id[0], now_date))
+                    (new_order_id, game_id, now_date))
                 db.commit()
                 QMessageBox.information(self, "提示", f"游戏 {game_name} 已成功添加到购物车！")
 
