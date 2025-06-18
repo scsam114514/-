@@ -20,6 +20,14 @@ class LogInWindow(QtWidgets.QMainWindow):
         self.setAttribute(QtCore.Qt.WA_TranslucentBackground)
         self.center()
 
+        # Set password fields to Password mode by default
+        self.ui.lineEdit_L_Password.setEchoMode(QtWidgets.QLineEdit.Password)
+        self.ui.lineEdit_L_Password_manufacturer.setEchoMode(QtWidgets.QLineEdit.Password)
+        self.ui.lineEdit_User_R_Password.setEchoMode(QtWidgets.QLineEdit.Password)
+        self.ui.lineEdit_User_R_CheckPassword.setEchoMode(QtWidgets.QLineEdit.Password)
+        self.ui.lineEdit_Manufacturer_R_Password.setEchoMode(QtWidgets.QLineEdit.Password)
+        self.ui.lineEdit_Manufacturer_R_CheckPassword.setEchoMode(QtWidgets.QLineEdit.Password)
+
         # Add exit button
         exit_button = QPushButton(self)
         exit_button.setText("X")
@@ -41,6 +49,7 @@ class LogInWindow(QtWidgets.QMainWindow):
         self.show_password_user_login = QCheckBox(self.ui.page_UserLogin)
         self.show_password_user_login.setStyleSheet("QCheckBox { color: white; spacing: 0px; } QCheckBox::indicator { width: 16px; height: 16px; }")
         self.show_password_user_login.setText("")  # Remove text
+        self.show_password_user_login.setChecked(False)  # Ensure unchecked by default
         self.show_password_user_login.stateChanged.connect(self.toggle_user_login_password)
         layout = self.ui.page_UserLogin.layout()
         index = layout.indexOf(self.ui.lineEdit_L_Password)
@@ -57,6 +66,7 @@ class LogInWindow(QtWidgets.QMainWindow):
         self.show_password_manufacturer_login = QCheckBox(self.ui.page_manufacturerLogin)
         self.show_password_manufacturer_login.setStyleSheet("QCheckBox { color: white; spacing: 0px; } QCheckBox::indicator { width: 16px; height: 16px; }")
         self.show_password_manufacturer_login.setText("")  # Remove text
+        self.show_password_manufacturer_login.setChecked(False)  # Ensure unchecked by default
         self.show_password_manufacturer_login.stateChanged.connect(self.toggle_manufacturer_login_password)
         layout = self.ui.page_manufacturerLogin.layout()
         index = layout.indexOf(self.ui.lineEdit_L_Password_manufacturer)
@@ -73,6 +83,7 @@ class LogInWindow(QtWidgets.QMainWindow):
         self.show_password_user_reg = QCheckBox(self.ui.page_userRegister)
         self.show_password_user_reg.setStyleSheet("QCheckBox { color: white; spacing: 0px; } QCheckBox::indicator { width: 16px; height: 16px; }")
         self.show_password_user_reg.setText("")  # Remove text
+        self.show_password_user_reg.setChecked(False)  # Ensure unchecked by default
         self.show_password_user_reg.stateChanged.connect(self.toggle_user_reg_password)
         layout = self.ui.page_userRegister.layout()
         index = layout.indexOf(self.ui.lineEdit_User_R_Password)
@@ -89,6 +100,7 @@ class LogInWindow(QtWidgets.QMainWindow):
         self.show_check_password_user_reg = QCheckBox(self.ui.page_userRegister)
         self.show_check_password_user_reg.setStyleSheet("QCheckBox { color: white; spacing: 0px; } QCheckBox::indicator { width: 16px; height: 16px; }")
         self.show_check_password_user_reg.setText("")  # Remove text
+        self.show_check_password_user_reg.setChecked(False)  # Ensure unchecked by default
         self.show_check_password_user_reg.stateChanged.connect(self.toggle_user_reg_check_password)
         layout = self.ui.page_userRegister.layout()
         index = layout.indexOf(self.ui.lineEdit_User_R_CheckPassword)
@@ -105,6 +117,7 @@ class LogInWindow(QtWidgets.QMainWindow):
         self.show_password_manufacturer_reg = QCheckBox(self.ui.page_manufacturerRregister)
         self.show_password_manufacturer_reg.setStyleSheet("QCheckBox { color: white; spacing: 0px; } QCheckBox::indicator { width: 16px; height: 16px; }")
         self.show_password_manufacturer_reg.setText("")  # Remove text
+        self.show_password_manufacturer_reg.setChecked(False)  # Ensure unchecked by default
         self.show_password_manufacturer_reg.stateChanged.connect(self.toggle_manufacturer_reg_password)
         layout = self.ui.page_manufacturerRregister.layout()
         index = layout.indexOf(self.ui.lineEdit_Manufacturer_R_Password)
@@ -121,6 +134,7 @@ class LogInWindow(QtWidgets.QMainWindow):
         self.show_check_password_manufacturer_reg = QCheckBox(self.ui.page_manufacturerRregister)
         self.show_check_password_manufacturer_reg.setStyleSheet("QCheckBox { color: white; spacing: 0px; } QCheckBox::indicator { width: 16px; height: 16px; }")
         self.show_check_password_manufacturer_reg.setText("")  # Remove text
+        self.show_check_password_manufacturer_reg.setChecked(False)  # Ensure unchecked by default
         self.show_check_password_manufacturer_reg.stateChanged.connect(self.toggle_manufacturer_reg_check_password)
         layout = self.ui.page_manufacturerRregister.layout()
         index = layout.indexOf(self.ui.lineEdit_Manufacturer_R_CheckPassword)
