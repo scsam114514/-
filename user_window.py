@@ -1,7 +1,7 @@
 from PyQt5.QtCore import QTimer, Qt
 from testwindow import Ui_testwindow
 from PyQt5 import QtCore, QtWidgets, QtGui
-from PyQt5.QtWidgets import QFrame, QApplication, QMessageBox, QHBoxLayout, QScrollArea, QPlainTextEdit, QLabel, QMainWindow, QDesktopWidget, QPushButton, QVBoxLayout, QWidget
+from PyQt5.QtWidgets import QFrame, QApplication, QMessageBox, QHBoxLayout, QScrollArea, QPlainTextEdit, QLabel, QMainWindow, QDesktopWidget, QPushButton, QVBoxLayout, QWidget, QListWidget, QListWidgetItem
 import sys
 import pymysql
 import datetime
@@ -11,32 +11,119 @@ class MainUserWindow(QtWidgets.QMainWindow):
     evaluation_frames = []  # 存储评价框架的列表
     test01 = 0  # 测试变量
 
+    # def __init__(self, user_id):
+    #     super().__init__()
+    #     self.user_id = user_id  # 保存用户ID
+    #     self.ui = Ui_testwindow()  # 初始化UI
+    #     self.ui.setupUi(self)
+    #     self.ui.stackedWidget_Window.setCurrentIndex(0)  # 设置主窗口默认页面
+    #
+    #     # 设置无边框窗口并启用透明背景
+    #     self.setWindowFlag(QtCore.Qt.FramelessWindowHint)
+    #     self.setAttribute(QtCore.Qt.WA_TranslucentBackground)
+    #     self.center()  # 窗口居中
+    #
+    #     # 一次性连接所有按钮信号
+    #     self.ui.pushButton_ShowUserFriends.clicked.connect(self.show_personal_friends_page)
+    #     self.ui.pushButton_ShowAddFriend.clicked.connect(
+    #         lambda: self.ui.stackedWidget_userFriendPage.setCurrentIndex(1))
+    #     self.ui.pushButton_search.clicked.connect(self.show_addfriend_page)
+    #     self.ui.pushButton_ShowApplication.clicked.connect(self.show_application_page)
+    #     self.ui.pushButton_SearchGame.clicked.connect(self.show_searchgame_page)
+    #     self.ui.lineEdit_SearchGame.returnPressed.connect(self.show_searchgame_page)
+    #     self.ui.pushButton_GoMainPage.clicked.connect(self.show_allgames_page)
+    #     self.ui.pushButton_GoFriendPage.clicked.connect(self.show_personal_friends_page)
+    #     self.ui.pushButton_GoGameLibraryPage.clicked.connect(self.show_personal_gamelibrary_page)
+    #     self.ui.pushButton_GoShoppingCartPage.clicked.connect(self.show_personal_shoppingcart_page)
+    #     self.ui.pushButton_KeepShopping.clicked.connect(self.show_allgames_page)  # 继续购物按钮
+    #     self.ui.pushButton_Pay.clicked.connect(self.pay_for_game)  # 支付按钮信号连接
+    #
+    #     # 创建退出按钮
+    #     exit_button = QPushButton(self)
+    #     exit_button.setText("X")
+    #     exit_button.setGeometry(QtCore.QRect(self.width() - 50, 10, 40, 40))
+    #     exit_button.setStyleSheet("""
+    #         QPushButton {
+    #             background-color: rgba(255, 255, 255, 50);
+    #             color: white;
+    #             font: 14pt "微软雅黑";
+    #             border-radius: 5px;
+    #         }
+    #         QPushButton:hover {
+    #             background-color: rgba(255, 0, 0, 100);
+    #         }
+    #     """)
+    #     exit_button.clicked.connect(self.close)
+    #
+    #     # 设置滚动区域布局
+    #     self.scrollAreaLayout = QVBoxLayout(self.ui.scrollAreaWidgetContents_3)
+    #     self.ui.scrollAreaWidgetContents_3.setLayout(self.scrollAreaLayout)
+    #
+    #     # 获取用户名并设置到个人页面按钮
+    #     db = pymysql.connect(host="localhost", user="root", password='123456', port=3306, db='game_system')
+    #     cursor = db.cursor()
+    #     cursor.execute("SELECT ACCOUNT_NUMBER FROM user WHERE USER_ID = %s", (self.user_id,))
+    #     user_name = cursor.fetchone()
+    #     db.close()
+    #
+    #     if user_name:
+    #         self.ui.pushButton_GoPersonalPage.setText(user_name[0])
+    #     else:
+    #         print("未找到对应ID的用户")
+    #
+    #     self.show_allgames_page()  # 显示所有游戏页面
+    #     self.show()  # 显示窗口
     def __init__(self, user_id):
         super().__init__()
-        self.user_id = user_id  # 保存用户ID
-        self.ui = Ui_testwindow()  # 初始化UI
+        self.user_id = user_id
+        self.ui = Ui_testwindow()
         self.ui.setupUi(self)
-        self.ui.stackedWidget_Window.setCurrentIndex(0)  # 设置主窗口默认页面
+        self.ui.stackedWidget_Window.setCurrentIndex(0)
 
-        # 设置无边框窗口并启用透明背景
         self.setWindowFlag(QtCore.Qt.FramelessWindowHint)
         self.setAttribute(QtCore.Qt.WA_TranslucentBackground)
-        self.center()  # 窗口居中
+        self.center()
 
-        # 一次性连接所有按钮信号
+        # 添加游戏类型选择控件到商场主界面
+        self.game_type_list = QListWidget(self.ui.scrollArea)
+        self.game_type_list.setGeometry(QtCore.QRect(10, 180, 150, 450))  # 位于顶部图片下方
+        self.game_type_list.setStyleSheet("""
+            QListWidget {
+                background-color: rgba(255, 255, 255, 50);
+                color: white;
+                font: 12pt "微软雅黑";
+                border: none;
+            }
+            QListWidget::item {
+                padding: 10px;
+            }
+            QListWidget::item:selected {
+                background-color: rgb(92, 138, 0);
+                color: white;
+            }
+        """)
+        self.populate_game_types()
+        self.game_type_list.itemClicked.connect(self.filter_games_by_type_in_store)
+
+        # 调整滚动区域内容以避免重叠
+        self.ui.scrollAreaWidgetContents.setGeometry(QtCore.QRect(170, 0, 850, 10000))
+        self.ui.scrollAreaWidgetContents_3.setGeometry(
+            QtCore.QRect(170, 0, 850, 10000))  # 修改：与 scrollAreaWidgetContents 一致
+
+        # 连接按钮信号
+        self.ui.pushButton_GoMainPage.clicked.connect(self.show_allgames_page)
+        self.ui.pushButton_SearchGame.clicked.connect(self.show_searchgame_page)
+        self.ui.lineEdit_SearchGame.returnPressed.connect(self.show_searchgame_page)
+        self.ui.pushButton_GoFriendPage.clicked.connect(self.show_personal_friends_page)
+        self.ui.pushButton_GoGameLibraryPage.clicked.connect(self.show_personal_gamelibrary_page)
+        self.ui.pushButton_GoShoppingCartPage.clicked.connect(self.show_personal_shoppingcart_page)
+        self.ui.pushButton_KeepShopping.clicked.connect(self.show_allgames_page)
+        self.ui.pushButton_Pay.clicked.connect(self.pay_for_game)
         self.ui.pushButton_ShowUserFriends.clicked.connect(self.show_personal_friends_page)
         self.ui.pushButton_ShowAddFriend.clicked.connect(
             lambda: self.ui.stackedWidget_userFriendPage.setCurrentIndex(1))
         self.ui.pushButton_search.clicked.connect(self.show_addfriend_page)
         self.ui.pushButton_ShowApplication.clicked.connect(self.show_application_page)
-        self.ui.pushButton_SearchGame.clicked.connect(self.show_searchgame_page)
-        self.ui.lineEdit_SearchGame.returnPressed.connect(self.show_searchgame_page)
-        self.ui.pushButton_GoMainPage.clicked.connect(self.show_allgames_page)
-        self.ui.pushButton_GoFriendPage.clicked.connect(self.show_personal_friends_page)
-        self.ui.pushButton_GoGameLibraryPage.clicked.connect(self.show_personal_gamelibrary_page)
-        self.ui.pushButton_GoShoppingCartPage.clicked.connect(self.show_personal_shoppingcart_page)
-        self.ui.pushButton_KeepShopping.clicked.connect(self.show_allgames_page)  # 继续购物按钮
-        self.ui.pushButton_Pay.clicked.connect(self.pay_for_game)  # 支付按钮信号连接
 
         # 创建退出按钮
         exit_button = QPushButton(self)
@@ -56,51 +143,56 @@ class MainUserWindow(QtWidgets.QMainWindow):
         exit_button.clicked.connect(self.close)
 
         # 设置滚动区域布局
-        self.scrollAreaLayout = QVBoxLayout(self.ui.scrollAreaWidgetContents_3)
-        self.ui.scrollAreaWidgetContents_3.setLayout(self.scrollAreaLayout)
+        self.scrollAreaLayout = QVBoxLayout(self.ui.scrollAreaWidgetContents)
+        self.ui.scrollAreaWidgetContents.setLayout(self.scrollAreaLayout)
 
-        # 获取用户名并设置到个人页面按钮
-        db = pymysql.connect(host="localhost", user="root", password='123456', port=3306, db='game_system')
-        cursor = db.cursor()
-        cursor.execute("SELECT ACCOUNT_NUMBER FROM user WHERE USER_ID = %s", (self.user_id,))
-        user_name = cursor.fetchone()
-        db.close()
+        # 获取用户名
+        with pymysql.connect(host="localhost", user="root", password='123456', port=3306, db='game_system') as db:
+            cursor = db.cursor()
+            cursor.execute("SELECT ACCOUNT_NUMBER FROM user WHERE USER_ID = %s", (self.user_id,))
+            user_name = cursor.fetchone()
+            if user_name:
+                self.ui.pushButton_GoPersonalPage.setText(user_name[0])
+            else:
+                print("未找到对应ID的用户")
 
-        if user_name:
-            self.ui.pushButton_GoPersonalPage.setText(user_name[0])
-        else:
-            print("未找到对应ID的用户")
+        self.show_allgames_page()
+        self.show()
 
-        self.show_allgames_page()  # 显示所有游戏页面
-        self.show()  # 显示窗口
+    def filter_games_by_type_in_store(self, item):
+        """按游戏类型筛选商场游戏"""
+        selected_type = item.data(QtCore.Qt.UserRole) if item else "all"
+        # 清空主页面和搜索页面的游戏显示
+        for widget in self.ui.scrollAreaWidgetContents.findChildren(QWidget):
+            if widget.y() >= 180:  # 保留顶部图片
+                widget.deleteLater()
+        for widget in self.ui.scrollAreaWidgetContents_3.findChildren(QWidget):
+            if widget.y() >= 180:
+                widget.deleteLater()
+        QApplication.processEvents()
 
-    def center(self):
-        """将窗口居中显示"""
-        qr = self.frameGeometry()
-        cp = QDesktopWidget().availableGeometry().center()
-        qr.moveCenter(cp)
-        self.move(qr.topLeft())
+        with pymysql.connect(host="localhost", user="root", password='123456', port=3306, db='game_system') as db:
+            cursor = db.cursor()
+            if selected_type == "all":
+                cursor.execute("SELECT GAME_NAME, introduction, price FROM game")
+            else:
+                cursor.execute("""
+                    SELECT g.GAME_NAME, g.introduction, g.price
+                    FROM game g
+                    JOIN GAME_TO_TYPE gt ON g.GAME_ID = gt.GAME_ID
+                    WHERE gt.TYPE_NAME = %s
+                """, (selected_type,))
+            all_games = cursor.fetchall()
 
-    def show_allgames_page(self):
-        """显示所有游戏页面"""
-        self.ui.stackedWidget_Window.setCurrentIndex(0)
-        db = pymysql.connect(host="localhost", user="root", password='123456', port=3306, db='game_system')
-        cursor = db.cursor()
-        cursor.execute("SELECT COUNT(*) FROM game")
-        game_count = int(cursor.fetchone()[0])
-        cursor.execute("SELECT GAME_NAME, introduction, price FROM game")
-        all_game = cursor.fetchall()
-        db.close()
-
-        x, y = 207, 180
-        for i in range(game_count):
-            self.add_page(x, y, all_game[i][0], all_game[i][1], all_game[i][2])
-            y += 160
+            x, y = 170, 180  # 修改：x 从 10 调整为 170，避免与 game_type_list 重叠
+            for game in all_games:
+                self.add_page(x, y, game[0], game[1], game[2])
+                y += 160
 
     def add_page(self, x, y, name, introduction, cost):
         """添加游戏页面到滚动区域"""
         frame = QFrame(parent=self.ui.scrollAreaWidgetContents)
-        frame.move(x, y)
+        frame.move(170, y)  # 修改：x 从 10 调整为 170，避免与 game_type_list 重叠
         frame.setMinimumSize(615, 150)
         frame.setMaximumSize(615, 150)
         frame.setStyleSheet("background-color: rgb(59, 59, 89);")
@@ -157,6 +249,268 @@ class MainUserWindow(QtWidgets.QMainWindow):
         pushButton.clicked.connect(lambda: self.add_game_to_shoppingcart(name, self.user_id))
         horizontalLayout_2.addWidget(pushButton)
         game_frame.addLayout(horizontalLayout_2)
+        frame.show()
+
+        # 同步添加到搜索页面
+        frame_search = QFrame(parent=self.ui.scrollAreaWidgetContents_3)
+        frame_search.move(170, y)  # 修改：x 从 10 调整为 170，避免与 game_type_list 重叠
+        frame_search.setMinimumSize(615, 150)
+        frame_search.setMaximumSize(615, 150)
+        frame_search.setStyleSheet("background-color: rgb(59, 59, 89);")
+        layoutWidget_search = QWidget(frame_search)
+        layoutWidget_search.setGeometry(QtCore.QRect(0, 0, 615, 150))
+        game_frame_search = QVBoxLayout(layoutWidget_search)
+        game_frame_search.setContentsMargins(3, 3, 3, 3)
+
+        Game_Name_search = QPushButton(layoutWidget_search)
+        Game_Name_search.setStyleSheet("""
+            QPushButton {
+                background-color: rgb(255, 255, 255,20);
+                font: 15pt "微软雅黑";
+                color: rgb(255, 255, 255);
+                text-align: left;
+                border: none;
+                padding: 5px;
+            }
+            QPushButton:hover {
+                color: rgb(200, 200, 255);
+                text-decoration: underline;
+            }
+        """)
+        Game_Name_search.setText(name)
+        Game_Name_search.clicked.connect(lambda: self.evaluate_game_page(name))
+        game_frame_search.addWidget(Game_Name_search)
+
+        Game_Introduction_search = QPlainTextEdit(layoutWidget_search)
+        Game_Introduction_search.setReadOnly(True)
+        Game_Introduction_search.setStyleSheet("""
+            background-color: rgb(255, 255, 255,20);
+            font: 10pt "微软雅黑";
+            color: rgb(255, 255, 255);
+            border:none;
+        """)
+        Game_Introduction_search.setPlainText(introduction)
+        game_frame_search.addWidget(Game_Introduction_search)
+
+        horizontalLayout_search = QHBoxLayout()
+        for _ in range(3):
+            btn = QPushButton(layoutWidget_search)
+            btn.setStyleSheet("color: rgb(229, 255, 255); background-color: rgba(255, 255, 255, 50);")
+            btn.setText("")
+            horizontalLayout_search.addWidget(btn)
+
+        label_search = QLabel(layoutWidget_search)
+        label_search.setStyleSheet("font: 9pt '黑体'; color:rgb(255, 255, 255);")
+        label_search.setText(str(cost))
+        horizontalLayout_search.addWidget(label_search)
+
+        pushButton_search = QPushButton(layoutWidget_search)
+        pushButton_search.setStyleSheet("background-color: rgb(92, 138, 0); color: rgb(255, 255, 255);")
+        pushButton_search.setText("加入购物车")
+        pushButton_search.clicked.connect(lambda: self.add_game_to_shoppingcart(name, self.user_id))
+        horizontalLayout_search.addWidget(pushButton_search)
+        game_frame_search.addLayout(horizontalLayout_search)
+        frame_search.show()
+
+    def show_searchgame_page(self):
+        """显示搜索游戏页面"""
+        self.ui.stackedWidget_Window.setCurrentIndex(1)
+        # 清空搜索页面现有游戏
+        for widget in self.ui.scrollAreaWidgetContents_3.findChildren(QWidget):
+            if widget.y() >= 180:
+                widget.deleteLater()
+        QApplication.processEvents()
+
+        with pymysql.connect(host="localhost", user="root", password='123456', port=3306, db='game_system') as db:
+            cursor = db.cursor()
+            keyword = self.ui.lineEdit_SearchGame.text()
+            selected_type = self.game_type_list.currentItem().data(
+                QtCore.Qt.UserRole) if self.game_type_list.currentItem() else "all"
+
+            if selected_type == "all":
+                cursor.execute("SELECT GAME_NAME, introduction, price FROM game WHERE GAME_NAME LIKE %s",
+                               ('%' + keyword + '%',))
+            else:
+                cursor.execute("""
+                    SELECT g.GAME_NAME, g.introduction, g.price
+                    FROM game g
+                    JOIN GAME_TO_TYPE gt ON g.GAME_ID = gt.GAME_ID
+                    WHERE gt.TYPE_NAME = %s AND g.GAME_NAME LIKE %s
+                """, (selected_type, '%' + keyword + '%'))
+            all_games = cursor.fetchall()
+
+            x, y = 170, 180  # 修改：x 从 10 调整为 170，避免与 game_type_list 重叠
+            for game in all_games:
+                self.add_searched_page(x, y, game[0], game[1], game[2])
+                y += 160
+
+    def add_searched_page(self, x, y, name, introduction, cost):
+        """添加搜索到的游戏页面"""
+        frame = QFrame(parent=self.ui.scrollAreaWidgetContents_3)
+        frame.move(170, y)  # 修改：x 从 10 调整为 170，避免与 game_type_list 重叠
+        frame.setMinimumSize(615, 150)
+        frame.setMaximumSize(615, 150)
+        frame.setStyleSheet("background-color: rgb(59, 59, 89);")
+        layoutWidget = QWidget(frame)
+        layoutWidget.setGeometry(QtCore.QRect(0, 0, 615, 150))
+        game_frame = QVBoxLayout(layoutWidget)
+        game_frame.setContentsMargins(3, 3, 3, 3)
+
+        Game_Name = QPushButton(layoutWidget)
+        Game_Name.setStyleSheet("""
+            QPushButton {
+                background-color: rgb(255, 255, 255,20);
+                font: 15pt "微软雅黑";
+                color: rgb(255, 255, 255);
+                text-align: left;
+                border: none;
+                padding: 5px;
+            }
+            QPushButton:hover {
+                color: rgb(200, 200, 255);
+                text-decoration: underline;
+            }
+        """)
+        Game_Name.setText(name)
+        Game_Name.clicked.connect(lambda: self.evaluate_game_page(name))
+        game_frame.addWidget(Game_Name)
+
+        Game_Introduction = QPlainTextEdit(layoutWidget)
+        Game_Introduction.setReadOnly(True)
+        Game_Introduction.setStyleSheet("""
+            background-color: rgb(255, 255, 255,20);
+            font: 10pt "微软雅黑";
+            color: rgb(255, 255, 255);
+            border:none;
+        """)
+        Game_Introduction.setPlainText(introduction)
+        game_frame.addWidget(Game_Introduction)
+
+        horizontalLayout_2 = QHBoxLayout()
+        for _ in range(3):
+            btn = QPushButton(layoutWidget)
+            btn.setStyleSheet("color: rgb(229, 255, 255); background-color: rgba(255, 255, 255, 50);")
+            btn.setText("")
+            horizontalLayout_2.addWidget(btn)
+
+        label_6 = QLabel(layoutWidget)
+        label_6.setStyleSheet("font: 9pt '黑体'; color:rgb(255, 255, 255);")
+        label_6.setText(str(cost))
+        horizontalLayout_2.addWidget(label_6)
+
+        pushButton = QPushButton(layoutWidget)
+        pushButton.setStyleSheet("background-color: rgb(92, 138, 0); color: rgb(255, 255, 255);")
+        pushButton.setText("加入购物车")
+        pushButton.clicked.connect(lambda: self.add_game_to_shoppingcart(name, self.user_id))
+        horizontalLayout_2.addWidget(pushButton)
+        game_frame.addLayout(horizontalLayout_2)
+        frame.show()
+
+    def populate_game_types(self):
+        """填充游戏类型列表"""
+        self.game_type_list.clear()
+        all_item = QListWidgetItem("全部")
+        all_item.setData(QtCore.Qt.UserRole, "all")
+        self.game_type_list.addItem(all_item)
+
+        with pymysql.connect(host="localhost", user="root", password='123456', port=3306, db='game_system') as db:
+            cursor = db.cursor()
+            cursor.execute("SELECT DISTINCT TYPE_NAME FROM GAME_TO_TYPE")
+            game_types = cursor.fetchall()
+            for game_type in game_types:
+                item = QListWidgetItem(game_type[0])
+                item.setData(QtCore.Qt.UserRole, game_type[0])
+                self.game_type_list.addItem(item)
+        self.game_type_list.setCurrentItem(all_item)
+
+    def show_allgames_page(self):
+        """显示所有游戏页面"""
+        self.ui.stackedWidget_Window.setCurrentIndex(0)
+        self.filter_games_by_type_in_store(self.game_type_list.currentItem())
+
+    def center(self):
+        """将窗口居中显示"""
+        qr = self.frameGeometry()
+        cp = QDesktopWidget().availableGeometry().center()
+        qr.moveCenter(cp)
+        self.move(qr.topLeft())
+
+    # def show_allgames_page(self):
+    #     """显示所有游戏页面"""
+    #     self.ui.stackedWidget_Window.setCurrentIndex(0)
+    #     db = pymysql.connect(host="localhost", user="root", password='123456', port=3306, db='game_system')
+    #     cursor = db.cursor()
+    #     cursor.execute("SELECT COUNT(*) FROM game")
+    #     game_count = int(cursor.fetchone()[0])
+    #     cursor.execute("SELECT GAME_NAME, introduction, price FROM game")
+    #     all_game = cursor.fetchall()
+    #     db.close()
+    #
+    #     x, y = 207, 180
+    #     for i in range(game_count):
+    #         self.add_page(x, y, all_game[i][0], all_game[i][1], all_game[i][2])
+    #         y += 160
+    #
+    # def add_page(self, x, y, name, introduction, cost):
+    #     """添加游戏页面到滚动区域"""
+    #     frame = QFrame(parent=self.ui.scrollAreaWidgetContents)
+    #     frame.move(x, y)
+    #     frame.setMinimumSize(615, 150)
+    #     frame.setMaximumSize(615, 150)
+    #     frame.setStyleSheet("background-color: rgb(59, 59, 89);")
+    #     layoutWidget = QWidget(frame)
+    #     layoutWidget.setGeometry(QtCore.QRect(0, 0, 615, 150))
+    #     game_frame = QVBoxLayout(layoutWidget)
+    #     game_frame.setContentsMargins(3, 3, 3, 3)
+    #
+    #     Game_Name = QPushButton(layoutWidget)
+    #     Game_Name.setStyleSheet("""
+    #         QPushButton {
+    #             background-color: rgb(255, 255, 255,20);
+    #             font: 15pt "微软雅黑";
+    #             color: rgb(255, 255, 255);
+    #             text-align: left;
+    #             border: none;
+    #             padding: 5px;
+    #         }
+    #         QPushButton:hover {
+    #             color: rgb(200, 200, 255);
+    #             text-decoration: underline;
+    #         }
+    #     """)
+    #     Game_Name.setText(name)
+    #     Game_Name.clicked.connect(lambda: self.evaluate_game_page(name))
+    #     game_frame.addWidget(Game_Name)
+    #
+    #     Game_Introduction = QPlainTextEdit(layoutWidget)
+    #     Game_Introduction.setReadOnly(True)
+    #     Game_Introduction.setStyleSheet("""
+    #         background-color: rgb(255, 255, 255,20);
+    #         font: 10pt "微软雅黑";
+    #         color: rgb(255, 255, 255);
+    #         border:none;
+    #     """)
+    #     Game_Introduction.setPlainText(introduction)
+    #     game_frame.addWidget(Game_Introduction)
+    #
+    #     horizontalLayout_2 = QHBoxLayout()
+    #     for _ in range(3):
+    #         btn = QPushButton(layoutWidget)
+    #         btn.setStyleSheet("color: rgb(229, 255, 255); background-color: rgba(255, 255, 255, 50);")
+    #         btn.setText("")
+    #         horizontalLayout_2.addWidget(btn)
+    #
+    #     label_6 = QLabel(layoutWidget)
+    #     label_6.setStyleSheet("font: 9pt '黑体'; color:rgb(255, 255, 255);")
+    #     label_6.setText(str(cost))
+    #     horizontalLayout_2.addWidget(label_6)
+    #
+    #     pushButton = QPushButton(layoutWidget)
+    #     pushButton.setStyleSheet("background-color: rgb(92, 138, 0); color: rgb(255, 255, 255);")
+    #     pushButton.setText("加入购物车")
+    #     pushButton.clicked.connect(lambda: self.add_game_to_shoppingcart(name, self.user_id))
+    #     horizontalLayout_2.addWidget(pushButton)
+    #     game_frame.addLayout(horizontalLayout_2)
 
     # def add_game_to_shoppingcart(self, game_name, user_id):
     #     """将游戏添加到购物车"""
@@ -372,9 +726,7 @@ class MainUserWindow(QtWidgets.QMainWindow):
             QPushButton {
                 background-color: rgb(255, 255, 255,20);
                 font: 15pt "微软雅黑";
-                color:
-
- rgb(255, 255, 255);
+                color:rgb(255, 255, 255);
                 text-align: left;
                 border: none;
                 padding: 5px;
